@@ -208,8 +208,14 @@ AgentRAGProject/
 │   │   ├── feedback_service.py
 │   │   └── security_service.py
 │   ├── domain/                  # 数据模型（纯 Python，无框架依赖）
-│   │   ├── document.py
+│   │   ├── __init__.py
+│   │   ├── user.py
 │   │   ├── collection.py
+│   │   ├── document.py
+│   │   ├── ingest_job.py
+│   │   ├── source_config.py
+│   │   ├── session.py
+│   │   ├── message.py
 │   │   ├── query.py
 │   │   ├── feedback.py
 │   │   └── memory.py
@@ -218,6 +224,7 @@ AgentRAGProject/
 │   │   ├── di.py
 │   │   ├── events.py
 │   │   ├── security.py
+│   │   ├── rate_limit.py         # 🆕 速率限制中间件
 │   │   └── telemetry.py
 │   └── workers/                 # 后台任务
 │       ├── ingest.py
@@ -228,6 +235,10 @@ AgentRAGProject/
 │   ├── admin/                   # 管理后台
 │   └── user/                    # 用户 Chat UI
 ├── tests/
+│   ├── conftest.py                # 共享 fixtures: test DB, test Milvus, test Redis
+│   ├── fixtures/
+│   │   ├── sample_docs.py         # 测试用 PDF/MD 样本
+│   │   └── agent_states.py        # 预设的 AgentState 快照
 │   ├── unit/
 │   │   ├── agents/
 │   │   ├── memory/
@@ -246,7 +257,36 @@ AgentRAGProject/
 │       └── specs/
 ├── pyproject.toml
 ├── Dockerfile
-└── docker-compose.yml
+└── docker-compose.yml      # 详见 §2.4
+```
+
+### 2.4 Docker Compose 服务规划
+
+```yaml
+# 按 Phase 分阶段启用服务
+# Phase 1 (MVP): postgres + milvus-standalone + etcd + redis + fastapi + arq-worker
+# Phase 2:       追加 neo4j + elasticsearch
+# Phase 3:       追加 minio + frontend-admin + frontend-user + prometheus + grafana
+
+services:
+  # === Phase 1 ===
+  postgres:          # pgvector/pgvector:pg16 — 主数据库 + 向量索引
+  milvus-standalone: # milvusdb/milvus:v2.4.0 — 向量检索 (依赖 etcd + minio/memory)
+  etcd:              # Milvus 元数据存储
+  redis:             # redis:7-alpine — 缓存 + 会话 + ARQ 队列
+  fastapi:           # uvicorn app.main:app — API 服务
+  arq-worker:        # ARQ 后台 worker — 摄入/修复/记忆巩固
+
+  # === Phase 2 ===
+  neo4j:             # neo4j:5 — 知识图谱
+  elasticsearch:     # elasticsearch:8.12.0 — 全文检索
+
+  # === Phase 3 ===
+  minio:             # minio/minio — 对象存储 (文件 + Milvus 持久化)
+  frontend-admin:    # React Admin UI :3001
+  frontend-user:     # React Chat UI :3000
+  prometheus:        # 指标收集
+  grafana:           # 监控面板
 ```
 
 ---
@@ -255,31 +295,33 @@ AgentRAGProject/
 
 ### 3.1 智能体角色
 
+Orchestrator（编排器）不是状态图中的一个独立节点，而是**整个 LangGraph 状态机本身**——它的边（edges）和条件边（conditional edges）承载了编排逻辑：何时进入 UNDERSTAND、何时触发 REFLECT、何时结束。下面六个是状态图中的实际节点：
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                       智能体协同流程                               │
 ├────────────┬─────────────────────────────────────────────────────┤
 │            │                                                     │
-│ Orchestrator│ 接收查询 → 启动 Understand → 收集结果 → 启动        │
-│ (编排器)    │ Execute → 触发 Reflect → 决策是否继续/返回          │
-│            │                                                     │
 │ Understand │ 意图识别 → 查询改写 → 任务分解(CoT) → 输出执行计划   │
-│ (理解器)    │ "这个查询需要先查定义,再找例子,最后做对比"           │
+│ (理解器)    │ 同时读取 memory 中的经验教训和用户画像               │
 │            │                                                     │
 │ Router     │ 分析子任务类型 → 选择检索路径                         │
-│ (路由器)    │ 事实查询→Milvus | 关系查询→KG | 精确匹配→关键词      │
+│ (路由器)    │ fact→Milvus | relation→KG | exact→keyword           │
+│            │ comparison→hybrid | reasoning→hybrid                 │
+│            │ MVP Phase 1: 全部路由到 Milvus (降级)                │
 │            │                                                     │
 │ Execute    │ 多查询改写 → 多路并行检索 → 上下文扩展 → 重排序       │
-│ (执行器)    │ 按计划调用 Router → 收集检索结果                     │
+│ (执行器)    │ 按 Router 决策调用工具 → 收集+合并检索结果           │
 │            │                                                     │
 │ Reflect    │ 检查答案完整性 → 发现缺口 → 请求补充检索               │
-│ (反思器)    │ "缺少对比维度" → 触发新一轮 Execute                  │
+│ (反思器)    │ "缺少B方案的扩展性数据" → 回 ROUTE 重新规划          │
 │            │                                                     │
 │ Verify     │ 逐句溯源 → 矛盾检测 → 引文标注 → 未验证声明处理       │
 │ (验证器)    │ 每个事实声明必须有检索来源支撑                        │
+│            │ 补充检索也回 ROUTE（与 REFLECT 一致）                 │
 │            │                                                     │
 │ Memory     │ 压缩历史对话 → 提取关键事实 → 纠错学习                 │
-│ (记忆)     │ 知识记忆/经验记忆/画像记忆                             │
+│ (记忆)     │ 知识记忆 / 经验记忆 / 画像记忆                         │
 │            │                                                     │
 └────────────┴─────────────────────────────────────────────────────┘
 ```
@@ -292,12 +334,12 @@ AgentRAGProject/
                     └────┬─────┘
                          │
                     ┌────▼─────┐
-                    │UNDERSTAND│  意图 + CoT分解
+                    │UNDERSTAND│  意图识别 + CoT分解 + 读取经验记忆
                     └────┬─────┘
                          │
                     ┌────▼─────┐
-                    │  ROUTE   │  意图路由（Milvus/KG/ES/Web）
-                    └────┬─────┘
+                    │  ROUTE   │  为每个子任务选检索路径
+                    └────┬─────┘   (Phase1降级: 全部→milvus)
                          │
                     ┌────▼─────┐
                     │ EXECUTE  │  多查询改写 + 多路并行 + 上下文扩展 + 重排序
@@ -319,7 +361,7 @@ AgentRAGProject/
               └──────────┘    │
                               │
                     ┌─────────▼──┐
-                    │  VERIFY    │  逐句溯源 + 矛盾检测 + 引文标注
+                    │  VERIFY    │  逐句拆解 → 逐条溯源 → 矛盾检测
                     └─────────┬──┘
                               │
                    ┌──────────┴──────┐
@@ -330,7 +372,7 @@ AgentRAGProject/
                         │         │
                  ┌──────▼──┐      │
                  │ 补查缺口  │      │
-                 │(回EXECUTE)│     │
+                 │(回ROUTE) │      │  ← 回 ROUTE，与 REFLECT 一致
                  └──────────┘      │
                                    │
                          ┌─────────▼──┐
@@ -338,7 +380,7 @@ AgentRAGProject/
                          └─────────┬──┘
                                    │
                          ┌─────────▼──┐
-                         │   MEMORY   │  记忆更新
+                         │   MEMORY   │  提取知识/经验/画像 → 持久化
                          └─────────┬──┘
                                    │
                               ┌────▼───┐
@@ -351,41 +393,75 @@ AgentRAGProject/
 ```python
 class SubTask(TypedDict):
     id: str
-    description: str
-    intent: Literal["fact", "relation", "comparison", "reasoning"]
-    route: Literal["milvus", "kg", "keyword", "web", "hybrid"]
-    depends_on: List[str]
+    description: str           # "检索A方案的定义"
+    intent: Literal["fact", "relation", "comparison", "reasoning", "exact"]
+    depends_on: List[str]       # 依赖的子任务ID
     status: Literal["pending", "running", "done", "failed"]
 
+class RetrievedChunk(TypedDict):
+    chunk_id: str
+    document_id: str
+    text: str
+    score: float
+    source: str                # "milvus" | "kg" | "keyword" | "web"
+    metadata: dict
+
+class VerifiedClaim(TypedDict):
+    text: str
+    status: Literal["verified", "unverified", "contradicted"]
+    source_chunk_id: str | None
+    contradiction_note: str | None
+
+class Citation(TypedDict):
+    chunk_id: str
+    document_title: str
+    text: str
+    relevance: float
+
 class AgentState(TypedDict):
+    # === 输入 ===
     query: str
     conversation_history: List[dict]
-    
-    # Understand 产出
-    intent: str
+
+    # === UNDERSTAND 产出 ===
+    intent: str                               # fact | relation | comparison | reasoning
     rewritten_query: str
-    sub_tasks: List[SubTask]
-    
-    # Execute 产出
-    retrieved_chunks: List[dict]
-    kg_results: List[dict]
-    keyword_hits: List[dict]
-    
-    # Reflect 产出
+    sub_tasks: List[SubTask]                  # CoT 分解后的子任务列表
+
+    # === ROUTE 产出 ===
+    routes: Dict[str, str]                    # {subtask_id: "milvus|kg|keyword|web|hybrid"}
+
+    # === EXECUTE 产出 ===
+    retrieved: List[RetrievedChunk]            # 统一格式的检索结果（合并去重重排序后）
+    raw_milvus_hits: List[dict]               # 原始 Milvus 结果（调试用）
+    raw_kg_results: List[dict]                 # 原始 KG 结果
+    raw_keyword_hits: List[dict]               # 原始 ES 结果
+
+    # === REFLECT 产出 ===
     reflection_notes: str
-    missing_info: List[str]
-    quality_score: float
+    missing_info: List[str]                   # 缺口描述
+    quality_score: float                      # 0.0 - 1.0
     need_another_round: bool
-    
-    # Verify 产出
-    verified_claims: List[dict]
-    
-    # 循环控制
+
+    # === VERIFY 产出 ===
+    draft_answer: str                         # 待验证的草稿答案
+    verified_claims: List[VerifiedClaim]
+    supplement_queries: List[str]             # 需要补充检索的查询
+    need_supplement: bool
+
+    # === SYNTHESIZE 产出 ===
+    final_answer: str
+    citations: List[Citation]
+    uncertainty_flags: List[dict]             # 不确定性标注
+
+    # === 降级与告警 ===
+    warnings: List[str]
+    bare_minimum_mode: bool                   # 所有检索不可用 → 降至 memory only
+
+    # === 循环控制 ===
     iteration: int
     max_iterations: int
-    
-    # 最终产出
-    final_answer: str
+    prev_score: float | None                  # 上一轮质量分（检测改善停滞）
 ```
 
 ### 3.4 防死循环策略
@@ -409,11 +485,11 @@ def should_continue(state: AgentState):
 
 | 节点 | Prompt 核心逻辑 |
 |------|----------------|
-| UNDERSTAND | 分析查询意图，考虑对话历史。将复杂查询分解为可独立检索的子任务，标注意图类型和依赖关系 |
-| ROUTE | 为每个子任务选最佳检索路径：语义理解→milvus，实体关系→kg，精确匹配→keyword，最新信息→web，复杂需求→hybrid |
-| EXECUTE | 多查询改写生成变体 → 多路并行检索 → 上下文窗口扩展 → Cross-encoder 重排序 |
-| REFLECT | 批判者角色：完整性检查、事实支撑检查、矛盾检测、打分0-1。分数<0.7触发补充检索 |
-| VERIFY | 逐句拆解声明 → 逐条溯源 → 矛盾检测 → 未验证声明触发补充 → 输出带引文标记的答案 |
+| UNDERSTAND | 1. 从 Memory 读取经验记忆（类似查询的历史策略效果）和用户画像（偏好） 2. 分析查询意图，考虑对话历史 3. 将复杂查询分解为可独立检索的子任务 4. 标注意图类型和依赖关系 5. 输出 JSON 格式的子任务列表 |
+| ROUTE | 为每个子任务选最佳检索路径：语义理解→milvus，实体关系→kg，精确匹配→keyword，最新信息→web，复杂需求→hybrid。**Phase 1 降级：所有查询统一路由到 milvus**，Phase 2 启用完整路由逻辑 |
+| EXECUTE | 多查询改写生成变体 → 多路并行检索 → 上下文窗口扩展 → Cross-encoder 重排序。Phase 1 只调 Milvus，Phase 2 根据 route 选择工具组合 |
+| REFLECT | 批判者角色：完整性检查、事实支撑检查、矛盾检测、打分0-1。分数<0.7触发补充检索（回ROUTE重新路由） |
+| VERIFY | 逐句拆解声明 → 逐条溯源 → 矛盾检测 → 未验证声明触发补充 → 回 ROUTE 重新路由 → 输出带引文标记的答案 |
 | SYNTHESIZE | 硬约束：禁编造、引文强制、不确定性标注、拒绝回答（无结果时直接说不知道） |
 | MEMORY | 提取关键结论→知识记忆，检索策略效果→经验记忆，用户偏好信号→画像记忆 |
 
@@ -464,7 +540,41 @@ Source → [Parse] → [Clean] → Fork:
    - 全部成功 → ready
    - Milvus 成功但其他失败 → partial (核心检索可用)
    - Milvus 失败 → error
-4. 失败路径自动入修复队列
+4. 失败路径自动入修复队列 → ARQ 延迟重试(指数退避: 1min, 5min, 15min, 1h)
+
+### 4.5 修复队列设计
+
+修复队列复用 ARQ（基于 Redis），不需要额外的表。ARQ job 参数中携带 `{doc_id, failed_path, attempt, last_error}`：
+
+```python
+# app/workers/repair.py
+async def repair_document_path(ctx, doc_id: str, path: str, attempt: int):
+    """修复单个文档的单个存储路径"""
+    doc = await pg.get_document(doc_id)
+    if path == "milvus":
+        await milvus_writer.write(doc, doc_id)
+    elif path == "neo4j":
+        await neo4j_writer.write(doc, doc_id)
+    elif path == "es":
+        await es_writer.write(doc, doc_id)
+    
+    # 更新 path_status
+    await pg.update_path_status(doc_id, path, "ok")
+    
+    # 检查是否所有路径都已修复
+    doc = await pg.get_document(doc_id)
+    if all(v == "ok" for v in doc.path_status.values()):
+        await pg.update_document(doc_id, status="ready")
+
+# 指数退避重试
+# attempt 1: delay=60s, attempt 2: delay=300s, attempt 3: delay=900s, attempt 4: delay=3600s (放弃)
+```
+
+修复查询接口:
+```
+GET /api/v1/collections/{id}/repair-status   查看该知识库的 partial/error 文档列表
+POST /api/v1/collections/{id}/repair-all     手动触发全量修复
+```
 
 ---
 
@@ -496,7 +606,7 @@ Source → [Parse] → [Clean] → Fork:
 
 ## 6. API 设计
 
-完整端点清单（48个）:
+完整端点清单（60个）:
 
 ### 认证 (3)
 - `POST /api/v1/auth/register`
@@ -509,7 +619,7 @@ Source → [Parse] → [Clean] → Fork:
 - `DELETE /api/v1/sessions/{id}`
 - `GET /api/v1/sessions/{id}/history`
 
-### 知识库 (7)
+### 知识库 (9)
 - `POST /api/v1/collections`
 - `GET /api/v1/collections`
 - `DELETE /api/v1/collections/{id}`
@@ -517,6 +627,8 @@ Source → [Parse] → [Clean] → Fork:
 - `PATCH /api/v1/collections/{id}/config`
 - `POST /api/v1/collections/{id}/search`
 - `POST /api/v1/collections/{id}/rebuild-index`
+- `GET /api/v1/collections/{id}/repair-status`   ← 查看 partial/error 文档
+- `POST /api/v1/collections/{id}/repair-all`     ← 手动触发全量修复
 
 ### 文档 (7)
 - `GET /api/v1/collections/{id}/documents`
@@ -527,7 +639,7 @@ Source → [Parse] → [Clean] → Fork:
 - `POST /api/v1/collections/{id}/documents/batch-delete`
 - `GET /api/v1/collections/{id}/documents/{did}/chunks`
 
-### 摄入 (5)
+### 摄入 (7)
 - `POST /api/v1/ingest/local`
 - `POST /api/v1/ingest/web`
 - `POST /api/v1/ingest/database`
@@ -562,7 +674,7 @@ Source → [Parse] → [Clean] → Fork:
 - `DELETE /api/v1/memories?type=corrected`
 - `POST /api/v1/memories/export`
 
-### 管理 (8)
+### 管理 (12)
 - `GET /api/v1/admin/stats`
 - `GET /api/v1/admin/stats/routes`
 - `GET /api/v1/admin/logs`
@@ -614,21 +726,21 @@ Source → [Parse] → [Clean] → Fork:
 
 | 表 | 关键字段 |
 |----|---------|
-| users | id, username, email, password_hash, api_key_hash, role, is_active, last_login_at |
-| api_keys | id, user_id, name, key_hash, last_used_at, is_active |
-| user_quotas | id, user_id, quota_type, limit_value, used_value, period_start, period_end |
-| collections | id, owner_id, name, config(JSONB), doc_count, chunk_count, status |
-| documents | id, collection_id, title, source_type, source_path, mime_type, content_hash, embedding_model, language, metadata(JSONB), chunk_count, status, error_message |
-| ingest_jobs | id, collection_id, user_id, source_type, config_snapshot(JSONB), total/completed/failed_docs, errors(JSONB), status, started_at, completed_at |
-| source_configs | id, user_id, source_type, name, config(JSONB), is_active, last_run_at |
-| provider_configs | id, user_id, provider_type, provider_name, config_encrypted(BYTEA), is_default, is_active |
-| sessions | id, user_id, collection_id, title, summary, message_count, is_active, last_activity_at |
-| messages | id, session_id, trace_id, role, content(TEXT), citations(JSONB), token_count |
-| query_traces | id, session_id, user_id, collection_ids(JSONB), query(TEXT), answer(TEXT), model_used, total_tokens, estimated_cost, citations(JSONB), agent_graph(JSONB), quality_score, iterations, latency_ms |
-| feedbacks | id, trace_id, user_id, rating, feedback_type, comment, correction, resolved_status, admin_notes |
-| long_term_memories | id, user_id, type(knowledge/experience/profile), entity, content(JSONB), embedding(vector 1024), confidence, source_trace_id, status, corrected_by |
-| system_configs | id, key, value(JSONB), description, updated_by |
-| audit_logs | id, user_id, action, resource_type, resource_id, detail(JSONB), ip_address, user_agent |
+| users | id, username, email, password_hash, api_key_hash, role, is_active, last_login_at, created_at, updated_at |
+| api_keys | id, user_id, name, key_hash, last_used_at, is_active, created_at |
+| user_quotas | id, user_id, quota_type, limit_value, used_value, period_start, period_end, created_at, updated_at |
+| collections | id, owner_id, name, config(JSONB), doc_count, chunk_count, status, created_at, updated_at |
+| documents | id, collection_id, title, source_type, source_path, mime_type, content_hash, embedding_model, language, metadata(JSONB), chunk_count, status(pending/processing/ready/partial/error), path_status(JSONB), error_message, ingested_at, created_at, updated_at |
+| ingest_jobs | id, collection_id, user_id, source_type, config_snapshot(JSONB), total/completed/failed_docs, errors(JSONB), status, started_at, completed_at, created_at |
+| source_configs | id, user_id, source_type, name, config(JSONB), is_active, last_run_at, created_at, updated_at |
+| provider_configs | id, user_id, provider_type, provider_name, config_encrypted(BYTEA), is_default, is_active, created_at, updated_at |
+| sessions | id, user_id, collection_id, title, summary, message_count, is_active, last_activity_at, created_at, updated_at |
+| messages | id, session_id, trace_id, role, content(TEXT), citations(JSONB), token_count, created_at |
+| query_traces | id, session_id, user_id, collection_ids(JSONB), query(TEXT), answer(TEXT), model_used, total_tokens, estimated_cost, citations(JSONB), agent_graph(JSONB), quality_score, iterations, latency_ms, created_at |
+| feedbacks | id, trace_id, user_id, rating, feedback_type, comment, correction, resolved_status, admin_notes, created_at, updated_at |
+| long_term_memories | id, user_id, type(knowledge/experience/profile), entity, content(JSONB), embedding(vector 1024), confidence, source_trace_id, status, corrected_by, created_at, updated_at |
+| system_configs | id, key, value(JSONB), description, updated_by, updated_at |
+| audit_logs | id, user_id, action, resource_type, resource_id, detail(JSONB), ip_address, user_agent, created_at |
 
 ### 7.2 索引设计
 
@@ -645,6 +757,45 @@ CREATE INDEX idx_memories_embedding ON long_term_memories
 CREATE INDEX idx_ingest_jobs_collection ON ingest_jobs(collection_id, status);
 CREATE INDEX idx_audit_logs_user ON audit_logs(user_id, created_at);
 CREATE INDEX idx_user_quotas_user ON user_quotas(user_id, quota_type);
+```
+
+### 7.2b agent_graph JSONB 结构
+
+`query_traces.agent_graph` 存储完整的 Agent 执行过程，供 `/query/{trace_id}/trace` 和 `/admin/stats/routes` 使用：
+
+```json
+{
+  "nodes": ["UNDERSTAND", "ROUTE", "EXECUTE", "REFLECT", "VERIFY", "SYNTHESIZE", "MEMORY"],
+  "iterations": [
+    {
+      "round": 1,
+      "understand": {
+        "intent": "comparison",
+        "rewritten_query": "对比A方案和B方案的扩展性",
+        "sub_tasks": [
+          {"id": "t1", "description": "检索A方案扩展性", "intent": "fact"},
+          {"id": "t2", "description": "检索B方案扩展性", "intent": "fact"}
+        ]
+      },
+      "route": {
+        "decisions": {"t1": "milvus", "t2": "milvus"}
+      },
+      "execute": {
+        "calls": [
+          {"tool": "milvus", "query_variants": ["A方案 扩展性", "A方案 水平扩展"], "hits": 5, "latency_ms": 150}
+        ]
+      },
+      "reflect": {
+        "quality_score": 0.55,
+        "missing": ["缺少具体指标对比"],
+        "latency_ms": 300
+      }
+    }
+  ],
+  "final_verify": {
+    "claims_total": 6, "verified": 5, "unverified": 1, "contradictions": 0
+  }
+}
 ```
 
 ### 7.3 Milvus (2个Collection)
@@ -730,6 +881,18 @@ memory_id(varchar), embedding(float_vector), metadata(json)
 - **Token 预算**: 单次查询最大 32000 tokens
 - **文件类型白名单**: PDF, TXT, MD, CSV, JSON, DOCX
 - **认证**: bcrypt 密码哈希 + API Key SHA-256 哈希
+- **速率限制**: FastAPI middleware + Redis 令牌桶，支持按用户/按 IP/按端点三级限流
+
+```python
+# app/core/rate_limit.py
+# 速率限制由 user_quotas 表驱动，Redis 存储滑动窗口计数
+
+# 默认限制（可通过 system_configs 覆盖）：
+#   /query, /query/stream:  30 req/min per user
+#   /ingest/*:              10 req/min per user
+#   /auth/*:                5 req/min per IP
+#   超标返回 429 + QUOTA_EXCEEDED
+```
 
 ### 8.4 全链路追踪
 
