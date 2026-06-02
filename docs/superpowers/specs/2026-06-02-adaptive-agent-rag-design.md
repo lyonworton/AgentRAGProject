@@ -126,11 +126,10 @@ AgentRAGProject/
 │   │       ├── memories.py
 │   │       └── admin.py
 │   ├── agents/                  # 多智能体
-│   │   ├── base.py
-│   │   ├── state.py
-│   │   ├── graph.py
-│   │   ├── nodes.py
-│   │   ├── orchestrator.py
+│   │   ├── base.py               # Agent 节点基类
+│   │   ├── state.py              # AgentState 类型定义
+│   │   ├── graph.py              # LangGraph 构建 + should_continue 决策
+│   │   ├── nodes.py              # SYNTHESIZE 节点 + 各节点公共逻辑
 │   │   ├── understander.py
 │   │   ├── router.py
 │   │   ├── executor.py
@@ -218,6 +217,8 @@ AgentRAGProject/
 │   │   ├── message.py
 │   │   ├── query.py
 │   │   ├── feedback.py
+│   │   ├── provider_config.py
+│   │   ├── system_config.py
 │   │   └── memory.py
 │   ├── core/                    # 基础设施
 │   │   ├── config.py
@@ -488,10 +489,10 @@ def should_continue(state: AgentState):
 | UNDERSTAND | 1. 从 Memory 读取经验记忆（类似查询的历史策略效果）和用户画像（偏好） 2. 分析查询意图，考虑对话历史 3. 将复杂查询分解为可独立检索的子任务 4. 标注意图类型和依赖关系 5. 输出 JSON 格式的子任务列表 |
 | ROUTE | 为每个子任务选最佳检索路径：语义理解→milvus，实体关系→kg，精确匹配→keyword，最新信息→web，复杂需求→hybrid。**Phase 1 降级：所有查询统一路由到 milvus**，Phase 2 启用完整路由逻辑 |
 | EXECUTE | 多查询改写生成变体 → 多路并行检索 → 上下文窗口扩展 → Cross-encoder 重排序。Phase 1 只调 Milvus，Phase 2 根据 route 选择工具组合 |
-| REFLECT | 批判者角色：完整性检查、事实支撑检查、矛盾检测、打分0-1。分数<0.7触发补充检索（回ROUTE重新路由） |
+| REFLECT | 1. 基于当前检索结果生成草稿答案（draft_answer） 2. 批判者角色：完整性检查、事实支撑检查、矛盾检测、打分0-1 3. 分数<0.7触发补充检索（回ROUTE重新路由） |
 | VERIFY | 逐句拆解声明 → 逐条溯源 → 矛盾检测 → 未验证声明触发补充 → 回 ROUTE 重新路由 → 输出带引文标记的答案 |
 | SYNTHESIZE | 硬约束：禁编造、引文强制、不确定性标注、拒绝回答（无结果时直接说不知道） |
-| MEMORY | 提取关键结论→知识记忆，检索策略效果→经验记忆，用户偏好信号→画像记忆 |
+| MEMORY | 1. 提取关键结论→知识记忆，检索策略效果→经验记忆，用户偏好信号→画像记忆 2. 异步执行，失败不影响答案返回（静默降级） |
 
 ---
 
