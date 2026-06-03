@@ -5,6 +5,13 @@ from app.core.config import get_settings
 settings = get_settings()
 
 
+def _flatten_routes(routes: dict) -> list[str]:
+    flat: set[str] = set()
+    for tools in routes.values():
+        flat.update(tools)
+    return list(flat)
+
+
 class AgentService:
     def __init__(self):
         self.graph = get_graph()
@@ -51,7 +58,7 @@ class AgentService:
                 "sub_tasks_executed": len(result.get("sub_tasks", [])),
                 "iterations": result.get("iteration", 0),
                 "quality_score": result.get("quality_score", 0),
-                "routes_used": list(set(result.get("routes", {}).values())),
+                "routes_used": _flatten_routes(result.get("routes", {})),
             },
             "uncertainty_flags": result.get("uncertainty_flags", []),
         }
