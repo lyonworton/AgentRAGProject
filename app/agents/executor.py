@@ -1,57 +1,117 @@
-import json
+import asyncio
 from app.agents.state import AgentState, RetrievedChunk
-from app.adapters.llm.openai import OpenAILLM
-from app.adapters.embedding.openai_embed import OpenAIEmbedding
-from app.adapters.vector_store.milvus import MilvusStore
-
-QUERY_EXPAND_PROMPT = """Generate {n} alternative search queries for the given task description.
-The variants should use different wording, synonyms, and perspectives to maximize recall.
-Output JSON array of strings only.
-"""
+from app.tools import get_tool_registry
 
 
-async def _expand_queries(task_desc: str, n: int = 3) -> list[str]:
-    llm = OpenAILLM()
-    result = await llm.agenerate_structured(
-        QUERY_EXPAND_PROMPT.format(n=n) + f"\nTask: {task_desc}",
-        output_schema={"type": "array", "items": {"type": "string"}}
-    )
-    return result if isinstance(result, list) else [task_desc]
+def _resolve_groups(sub_tasks: list[dict]) -> list[list[str]]:
+    """Topological sort into execution groups. Tasks within a group have no mutual dependencies."""
+    if not sub_tasks:
+        return []
+
+    all_ids = {t["id"] for t in sub_tasks}
+    for t in sub_tasks:
+        for dep in t.get("depends_on", []):
+            if dep not in all_ids:
+                raise ValueError(f"Task {t['id']} depends on unknown task {dep}")
+
+    completed: set[str] = set()
+    remaining = {t["id"]: set(t.get("depends_on", [])) for t in sub_tasks}
+    groups: list[list[str]] = []
+
+    while remaining:
+        ready = [tid for tid, deps in remaining.items() if deps.issubset(completed)]
+        if not ready:
+            raise ValueError(f"Circular dependency detected: {remaining}")
+        groups.append(ready)
+        completed.update(ready)
+        for tid in ready:
+            del remaining[tid]
+
+    return groups
+
+
+async def _execute_task(
+    task: dict,
+    routes: dict[str, list[str]],
+    collection_ids: list[str],
+    registry,
+) -> tuple[list[dict], list[str]]:
+    tool_names = routes.get(task["id"], ["semantic_search"])
+    task["status"] = "running"
+    warnings: list[str] = []
+
+    results = await asyncio.gather(*[
+        registry.get(name).arun(task["description"], collection_ids)
+        for name in tool_names
+    ], return_exceptions=True)
+
+    hits: list[dict] = []
+    for name, result in zip(tool_names, results):
+        if isinstance(result, Exception):
+            warnings.append(f"Tool {name} failed: {result}")
+        else:
+            for item in result:
+                item["_tool"] = name
+            hits.extend(result)
+
+    task["status"] = "failed" if not hits else "done"
+    return hits, warnings
 
 
 async def executor_node(state: AgentState) -> AgentState:
-    embedder = OpenAIEmbedding()
-    store = MilvusStore()
+    sub_tasks = state.get("sub_tasks", [])
+    routes = state.get("routes", {})
+    collection_ids = state.get("collection_ids", [])
+
+    state["raw_milvus_hits"] = []
+    state["raw_kg_results"] = []
+    state["raw_keyword_hits"] = []
+    warnings: list[str] = []
+
+    if not sub_tasks:
+        state["retrieved"] = []
+        state["warnings"] = warnings
+        return state
+
+    registry = get_tool_registry()
+
+    try:
+        groups = _resolve_groups(sub_tasks)
+    except ValueError as e:
+        if "depends on unknown" in str(e):
+            groups = [[t["id"]] for t in sub_tasks]
+            warnings.append(f"Dependency resolution skipped: {e}")
+        else:
+            raise
+
+    all_hits: list[dict] = []
+    for group in groups:
+        group_tasks = [t for t in sub_tasks if t["id"] in group]
+        group_results = await asyncio.gather(*[
+            _execute_task(t, routes, collection_ids, registry)
+            for t in group_tasks
+        ])
+        for hits, warns in group_results:
+            all_hits.extend(hits)
+            warnings.extend(warns)
+
     retrieved: list[RetrievedChunk] = []
-    seen_ids: set[str] = set()
-
-    for task in state.get("sub_tasks", []):
-        route = state["routes"].get(task["id"], "milvus")
-        if route != "milvus":
-            continue  # Phase 1: only milvus
-
-        variants = await _expand_queries(task["description"])
-        all_hits = []
-
-        for variant in variants:
-            qe = await embedder.aembed_query(variant)
-            # Use the appropriate collection for each collection_id
-            for col_id in state.get("collection_ids", []):
-                col_name = f"col_{col_id}"
-                try:
-                    hits = await store.search(col_name, qe, top_k=10)
-                    all_hits.extend(hits)
-                except Exception as e:
-                    state.setdefault("warnings", []).append(f"Milvus search failed for {col_name}: {e}")
-                    continue
-
-        # Merge, deduplicate, sort by score
-        all_hits.sort(key=lambda h: h.score, reverse=True)
-        for hit in all_hits:
-            if hit.chunk_id not in seen_ids:
-                retrieved.append(hit)
-                seen_ids.add(hit.chunk_id)
+    seen: set[str] = set()
+    for hit in sorted(all_hits, key=lambda h: h["score"], reverse=True):
+        if hit["chunk_id"] not in seen:
+            retrieved.append(RetrievedChunk(
+                chunk_id=hit["chunk_id"],
+                document_id=hit.get("document_id", ""),
+                text=hit["text"],
+                score=hit["score"],
+                source=hit["source"],
+                metadata={},
+            ))
+            seen.add(hit["chunk_id"])
 
     state["retrieved"] = retrieved
-    state["raw_milvus_hits"] = [{"chunk_id": r.chunk_id, "score": r.score, "text": r.text[:200]} for r in retrieved]
+    state["raw_milvus_hits"] = [h for h in all_hits if h["_tool"] == "semantic_search"]
+    state["raw_kg_results"] = [h for h in all_hits if h["_tool"] == "kg_search"]
+    state["raw_keyword_hits"] = [h for h in all_hits if h["_tool"] == "keyword_search"]
+    state.setdefault("warnings", []).extend(warnings)
     return state
