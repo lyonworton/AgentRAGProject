@@ -8,6 +8,16 @@ import app.domain.user
 import app.domain.collection
 import app.domain.document
 import app.domain.ingest_job
+import app.domain.session
+import app.domain.message
+import app.domain.query_trace
+import app.domain.feedback
+import app.domain.long_term_memory
+import app.domain.source_config
+import app.domain.provider_config
+import app.domain.system_config
+import app.domain.audit_log
+import app.domain.user_quota
 
 config = context.config
 if config.config_file_name is not None:

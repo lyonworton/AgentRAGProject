@@ -202,31 +202,33 @@ ToolRegistry 同时被 Router（获取 Tool 描述生成 LLM prompt）和 Execut
 
 ## 6. Router 设计
 
-### 6.1 从纯函数到 LLM 调用
+### 6.1 行为变更
 
-**当前**: `for task in subtasks: routes[task.id] = "milvus"`（硬编码）
+**当前**: Router 硬编码路由 + 初始化 `raw_keyword_hits = []` 和 `raw_kg_results = []`
 
-**新设计**: LLM 根据 subtask 描述 + intent + 可用 Tool 列表，动态决定路由。
+**新设计**: Router 只负责路由决策。`raw_*` 初始化移至 Executor（谁产出谁管理）。
+
+LLM 根据 subtask 描述 + intent + 可用 Tool 列表，动态决定路由。
 
 ### 6.2 Prompt
 
 ```
-你是检索路由专家。根据子任务的描述和意图，决定使用哪些检索工具。
+You are a retrieval routing specialist. Based on each subtask's description and intent, decide which retrieval tools to use.
 
-可用工具：
+Available tools:
 {tool_descriptions}       ← 从 ToolRegistry 动态生成
 
-路由参考：
-- fact 意图优先 semantic_search
-- relation 意图优先 kg_search
-- exact 意图优先 keyword_search
-- comparison 意图通常需要 semantic_search + kg_search
-- reasoning 意图可能需要所有三个工具
+Routing guidelines:
+- "fact" intent prioritizes semantic_search
+- "relation" intent prioritizes kg_search
+- "exact" intent prioritizes keyword_search
+- "comparison" intent typically needs semantic_search + kg_search
+- "reasoning" intent may need all three tools
 
-子任务列表：
+Sub-tasks:
 {tasks_json}              ← 仅含 id, description, intent
 
-输出 JSON 数组：
+Output JSON array only:
 [{"task_id": "t1", "tools": ["semantic_search"]}, ...]
 ```
 

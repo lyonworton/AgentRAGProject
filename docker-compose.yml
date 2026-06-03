@@ -57,6 +57,29 @@ services:
     depends_on: [postgres, milvus, redis]
     command: arq app.workers.main.WorkerSettings
 
+  # === Phase 2 ===
+  neo4j:
+    image: neo4j:5
+    ports: ["7474:7474", "7687:7687"]
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-agentrag123}
+    volumes: [neo4jdata:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'RETURN 1' | cypher-shell -u neo4j -p $${NEO4J_PASSWORD:-agentrag123} || exit 1"]
+
+  elasticsearch:
+    build:
+      context: .
+      dockerfile: Dockerfile.es
+    ports: ["9200:9200"]
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: false
+      ES_JAVA_OPTS: -Xms1g -Xmx1g
+    volumes: [esdata:/usr/share/elasticsearch/data]
+
 volumes:
   pgdata:
   minio_data:
+  neo4jdata:
+  esdata:

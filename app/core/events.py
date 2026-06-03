@@ -5,8 +5,37 @@ logger = structlog.get_logger()
 
 
 async def on_startup():
-    logger.info("app starting", env=get_settings().app_env)
+    settings = get_settings()
+    logger.info("app starting", env=settings.app_env)
+
+    # Phase 2: Prewarm Neo4j + ES connections (warn-only on failure)
+    try:
+        from app.core.di import get_kg_store
+        await get_kg_store()
+        logger.info("neo4j connected")
+    except Exception as e:
+        logger.warning("neo4j unavailable, KG features disabled", error=str(e))
+
+    try:
+        from app.core.di import get_search_store
+        await get_search_store()
+        logger.info("elasticsearch connected")
+    except Exception as e:
+        logger.warning("elasticsearch unavailable, keyword search disabled", error=str(e))
 
 
 async def on_shutdown():
     logger.info("app shutting down")
+
+    # Phase 2: Close Neo4j + ES connections
+    from app.core import di
+    try:
+        if di._kg_store is not None:
+            await di._kg_store.adisconnect()
+    except Exception:
+        pass
+    try:
+        if di._search_store is not None:
+            await di._search_store.adisconnect()
+    except Exception:
+        pass

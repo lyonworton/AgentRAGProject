@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     max_iterations: int = 5
     quality_threshold: float = 0.7
 
+    # Neo4j
+    neo4j_uri: str = "bolt://localhost:7687"
+    neo4j_user: str = "neo4j"
+    neo4j_password: str = "agentrag123"
+
+    # Elasticsearch
+    es_host: str = "http://localhost:9200"
+
     model_config = {"env_file": ".env", "case_sensitive": False}
 
 
