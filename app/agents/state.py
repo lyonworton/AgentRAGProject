@@ -27,7 +27,7 @@ class Citation(TypedDict):
     text: str
     relevance: float
 
-class AgentState(TypedDict):
+class AgentState(TypedDict, total=False):
     query: str
     conversation_history: List[dict]
     intent: str
@@ -54,3 +54,4 @@ class AgentState(TypedDict):
     iteration: int
     max_iterations: int
     prev_score: float | None
+    collection_ids: List[str]
