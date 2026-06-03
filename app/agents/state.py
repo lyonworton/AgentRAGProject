@@ -33,7 +33,7 @@ class AgentState(TypedDict, total=False):
     intent: str
     rewritten_query: str
     sub_tasks: List[SubTask]
-    routes: Dict[str, str]
+    routes: Dict[str, list[str]]
     retrieved: List[RetrievedChunk]
     raw_milvus_hits: List[dict]
     raw_kg_results: List[dict]
