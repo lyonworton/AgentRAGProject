@@ -30,7 +30,11 @@ async def ingest_local(collection_id: str = Form(...), files: list[UploadFile] =
         saved.append(dest)
     job = IngestJob(collection_id=collection_id, user_id=user.id, source_type="local")
     db.add(job); await db.commit(); await db.refresh(job)
-    arq_job_id = await enqueue_ingest(str(job.id), collection_id, user.id, saved)
+    arq_job_id = await enqueue_ingest(
+        str(job.id), collection_id, user.id,
+        source_type="local",
+        source_config={"file_paths": saved},
+    )
     return {"job_id": job.id, "arq_job_id": arq_job_id, "file_count": len(saved)}
 
 class IngestJobResponse(BaseModel):
