@@ -1,0 +1,57 @@
+from app.tools.base import BaseTool
+from app.adapters.embedding.openai_embed import OpenAIEmbedding
+from app.adapters.vector_store.milvus import MilvusStore
+from app.adapters.llm.openai import OpenAILLM
+
+QUERY_EXPAND_PROMPT = """Generate {n} alternative search queries for the given task description.
+The variants should use different wording, synonyms, and perspectives to maximize recall.
+Output JSON array of strings only.
+"""
+
+
+class SemanticSearchTool(BaseTool):
+    name = "semantic_search"
+    description = "Vector semantic search via Milvus — best for fact lookup and concept matching"
+
+    async def _expand_queries(self, query: str, n: int = 3) -> list[str]:
+        try:
+            llm = OpenAILLM()
+            result = await llm.agenerate_structured(
+                QUERY_EXPAND_PROMPT.format(n=n) + f"\nTask: {query}",
+                output_schema={"type": "array", "items": {"type": "string"}},
+            )
+            return result if isinstance(result, list) else [query]
+        except Exception:
+            return [query]
+
+    async def arun(
+        self, query: str, collection_ids: list[str], top_k: int = 10
+    ) -> list[dict]:
+        if not collection_ids:
+            return []
+        embedder = OpenAIEmbedding()
+        store = MilvusStore()
+        variants = await self._expand_queries(query)
+        all_hits: list[dict] = []
+        seen: set[str] = set()
+
+        for variant in variants:
+            qe = await embedder.aembed_query(variant)
+            for col_id in collection_ids:
+                col_name = f"col_{col_id}"
+                try:
+                    hits = await store.search(col_name, qe, top_k=top_k)
+                    for hit in hits:
+                        if hit.chunk_id not in seen:
+                            all_hits.append({
+                                "chunk_id": hit.chunk_id,
+                                "document_id": hit.document_id,
+                                "text": hit.text,
+                                "score": hit.score,
+                                "source": "milvus",
+                            })
+                            seen.add(hit.chunk_id)
+                except Exception:
+                    continue
+
+        return all_hits
