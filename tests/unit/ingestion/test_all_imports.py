@@ -46,3 +46,39 @@ def test_import_pipeline_functions():
     assert run_keyword_path is not None
     assert _compute_path_status is not None
     assert run_ingest_pipeline is not None
+
+
+def test_import_base_tool():
+    from app.tools.base import BaseTool
+    assert BaseTool is not None
+
+
+def test_import_tool_registry():
+    from app.tools import ToolRegistry, get_tool_registry
+    assert ToolRegistry is not None
+    assert get_tool_registry is not None
+
+
+def test_import_semantic_search_tool():
+    from app.tools.semantic_search import SemanticSearchTool
+    assert SemanticSearchTool is not None
+
+
+def test_import_kg_search_tool():
+    from app.tools.kg_search import KGSearchTool
+    assert KGSearchTool is not None
+
+
+def test_import_keyword_search_tool():
+    from app.tools.keyword_search import KeywordSearchTool
+    assert KeywordSearchTool is not None
+
+
+def test_import_router_fallback_rules():
+    from app.agents.router import FALLBACK_RULES
+    assert FALLBACK_RULES is not None
+
+
+def test_import_executor_resolve_groups():
+    from app.agents.executor import _resolve_groups
+    assert _resolve_groups is not None
