@@ -1,3 +1,4 @@
+import redis.asyncio as aioredis
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from app.core.config import get_settings
 
@@ -13,6 +14,18 @@ async def get_db() -> AsyncSession:
         except Exception:
             await session.rollback()
             raise
+
+
+# === Redis lazy singleton ===
+
+_redis_client: aioredis.Redis | None = None
+
+
+async def get_redis() -> aioredis.Redis:
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = aioredis.from_url(settings.redis_url, decode_responses=True)
+    return _redis_client
 
 
 # === Phase 2: KG + Search store singletons ===
