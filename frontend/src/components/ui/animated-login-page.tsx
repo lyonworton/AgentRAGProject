@@ -263,8 +263,8 @@ export function AnimatedLoginPage({ onSubmit, error: externalError, loading }: A
           </div>
         </div>
         <div className="relative z-20 flex items-center gap-8 text-sm text-primary-foreground/60">
-          <a href="#" className="hover:text-primary-foreground transition-colors">隐私政策</a>
-          <a href="#" className="hover:text-primary-foreground transition-colors">服务条款</a>
+          <a href="#" className="hover:text-primary-foreground transition-colors">Privacy Policy</a>
+          <a href="#" className="hover:text-primary-foreground transition-colors">Terms of Service</a>
         </div>
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
         <div className="absolute top-1/4 right-1/4 size-64 bg-primary-foreground/10 rounded-full blur-3xl" />
@@ -281,19 +281,19 @@ export function AnimatedLoginPage({ onSubmit, error: externalError, loading }: A
             <span>AgentRAG</span>
           </div>
           <div className="text-center mb-10">
-            <h1 className="text-3xl font-bold tracking-tight mb-2">欢迎回来</h1>
-            <p className="text-muted-foreground text-sm">请输入您的登录信息</p>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome back!</h1>
+            <p className="text-muted-foreground text-sm">Please enter your details</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-medium">用户名</Label>
-              <Input id="username" type="text" placeholder="请输入用户名" value={username}
+              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
+              <Input id="username" type="text" placeholder="Enter username" value={username}
                 autoComplete="off" onChange={(e) => setUsername(e.target.value)}
                 onFocus={() => setIsTyping(true)} onBlur={() => setIsTyping(false)}
                 required className="h-12 bg-background border-border/60 focus:border-primary" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">密码</Label>
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
               <div className="relative">
                 <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••"
                   value={password} onChange={(e) => setPassword(e.target.value)}
@@ -306,18 +306,18 @@ export function AnimatedLoginPage({ onSubmit, error: externalError, loading }: A
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="remember" />
-              <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">记住我 30 天</Label>
+              <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">Remember for 30 days</Label>
             </div>
             {externalError && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">{externalError}</div>
             )}
             <Button type="submit" className="w-full h-12 text-base font-medium" size="lg" disabled={loading}>
-              {loading ? "登录中..." : "登录"}
+              {loading ? "Signing in..." : "Log in"}
             </Button>
           </form>
           <div className="text-center text-sm text-muted-foreground mt-8">
-            还没有账号？{" "}
-            <a href="#" className="text-foreground font-medium hover:underline">注册</a>
+            Don&apos;t have an account?{" "}
+            <a href="#" className="text-foreground font-medium hover:underline">Sign Up</a>
           </div>
         </div>
       </div>

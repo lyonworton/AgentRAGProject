@@ -16,7 +16,7 @@ export function LoginPage() {
       await login(username, password)
       navigate('/admin')
     } catch (err: any) {
-      setError(err?.message || '登录失败')
+      setError(err?.message || 'Login failed')
     } finally {
       setLoading(false)
     }
