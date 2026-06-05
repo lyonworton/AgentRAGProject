@@ -1,7 +1,10 @@
 import json
+import structlog
 from app.agents.state import AgentState
 from app.adapters.llm.openai import OpenAILLM
 from app.tools import get_tool_registry
+
+logger = structlog.get_logger()
 
 ROUTE_PROMPT = """You are a retrieval routing specialist. Based on each subtask's description and intent, decide which retrieval tools to use.
 
@@ -67,6 +70,7 @@ async def route_node(state: AgentState) -> AgentState:
         )
         routes = {r["task_id"]: r["tools"] for r in result}
     except Exception:
+        logger.warning("llm_routing_failed_falling_back_to_rules", exc_info=True)
         routes = {
             t["id"]: FALLBACK_RULES.get(t["intent"], ["semantic_search"])
             for t in tasks

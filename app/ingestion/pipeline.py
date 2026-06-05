@@ -125,13 +125,14 @@ async def run_ingest_pipeline(
                     source_path=fp,
                     mime_type=parsed.mime_type,
                     file_size=parsed.file_size,
+                    content=parsed.content,
                     content_hash=hashlib.sha256(parsed.content.encode()).hexdigest(),
                     status="processing",
                 )
                 db.add(doc)
                 await db.commit()
-                await db.refresh(doc)
                 doc_id = doc.id
+                await db.refresh(doc)
 
             # 三路并行 Fork
             results = await asyncio.gather(

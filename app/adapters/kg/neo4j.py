@@ -1,9 +1,22 @@
+import re
 import structlog
 from neo4j import AsyncGraphDatabase
 from app.adapters.kg.base import BaseKGStore
 from app.core.config import get_settings
 
 logger = structlog.get_logger()
+
+# Whitelist for relationship type identifiers (Cypher cannot parameterize schema names)
+_REL_TYPE_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+
+
+def _validate_rel_type(rel_type: str) -> str:
+    """Validate and normalize a relationship type. Raises ValueError on invalid input."""
+    safe = rel_type.strip().upper()
+    if not _REL_TYPE_RE.match(safe):
+        raise ValueError(f"Invalid relationship type: {rel_type!r}. "
+                         f"Must be alphanumeric+underscore, max 64 chars, start with letter.")
+    return safe
 
 
 class Neo4jKGStore(BaseKGStore):
@@ -47,12 +60,22 @@ class Neo4jKGStore(BaseKGStore):
                     type=ent.get("type", ""),
                     aliases=ent.get("aliases", []),
                 )
+                # Link Document -> Entity provenance
+                await session.run(
+                    """
+                    MATCH (d:Document {id: $doc_id}), (e:Entity {id: $entity_id})
+                    MERGE (d)-[:CONTAINS]->(e)
+                    """,
+                    doc_id=doc_id,
+                    entity_id=ent["id"],
+                )
 
             for rel in relations:
+                rel_type = _validate_rel_type(rel["type"])
                 await session.run(
                     f"""
                     MATCH (a {{id: $from_id}}), (b {{id: $to_id}})
-                    MERGE (a)-[r:{rel['type'].upper()}]->(b)
+                    MERGE (a)-[r:{rel_type}]->(b)
                     """,
                     from_id=rel["from_entity"],
                     to_id=rel["to_entity"],
@@ -75,7 +98,7 @@ class Neo4jKGStore(BaseKGStore):
             )
             records = await result.data()
             return [
-                {"id": r["id"], "name": r["name"], "type": r["type"]}
+                {"id": r["id"], "name": r["name"], "type": r["type"], "score": 1.0}
                 for r in records
             ]
 
@@ -83,7 +106,7 @@ class Neo4jKGStore(BaseKGStore):
         self, entity_id: str, relation_type: str | None = None
     ) -> list[dict]:
         """Query relations for an entity."""
-        type_filter = f":{relation_type}" if relation_type else ""
+        type_filter = f":{_validate_rel_type(relation_type)}" if relation_type else ""
         async with self._driver.session() as session:
             result = await session.run(
                 f"""

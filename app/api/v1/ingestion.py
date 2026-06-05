@@ -14,12 +14,18 @@ from app.workers.ingest import enqueue_ingest
 router = APIRouter(prefix="/ingest", tags=["ingestion"])
 settings = get_settings()
 
+
+async def _get_owned_collection(db: AsyncSession, col_id: str, user: User):
+    col = await collection_service.get_collection(db, col_id)
+    if not col or col.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return col
+
+
 @router.post("/local")
 async def ingest_local(collection_id: str = Form(...), files: list[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    col = await collection_service.get_collection(db, collection_id)
-    if not col or col.owner_id != user.id:
-        raise HTTPException(status_code=404, detail="Collection not found")
+    await _get_owned_collection(db, collection_id, user)
     os.makedirs(settings.upload_dir, exist_ok=True)
     saved = []
     for f in files:
@@ -74,9 +80,7 @@ class DatabaseIngestRequest(BaseModel):
 @router.post("/web")
 async def ingest_web(req: WebIngestRequest, db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)):
-    col = await collection_service.get_collection(db, req.collection_id)
-    if not col or col.owner_id != user.id:
-        raise HTTPException(status_code=404, detail="Collection not found")
+    await _get_owned_collection(db, req.collection_id, user)
     job = IngestJob(collection_id=req.collection_id, user_id=user.id, source_type="web",
                     config_snapshot={"urls": req.urls})
     db.add(job); await db.commit(); await db.refresh(job)
@@ -90,9 +94,7 @@ async def ingest_web(req: WebIngestRequest, db: AsyncSession = Depends(get_db),
 @router.post("/database")
 async def ingest_database(req: DatabaseIngestRequest, db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)):
-    col = await collection_service.get_collection(db, req.collection_id)
-    if not col or col.owner_id != user.id:
-        raise HTTPException(status_code=404, detail="Collection not found")
+    await _get_owned_collection(db, req.collection_id, user)
     job = IngestJob(collection_id=req.collection_id, user_id=user.id, source_type="database",
                     config_snapshot={"db_url": req.db_url, "query": req.query,
                                      "title_column": req.title_column,

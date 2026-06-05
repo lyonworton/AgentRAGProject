@@ -1,8 +1,11 @@
 import asyncio
 import json
+import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.long_term_memory import LongTermMemory
+
+logger = structlog.get_logger()
 
 
 class LongTermMemoryStore:
@@ -27,7 +30,7 @@ class LongTermMemoryStore:
             text_to_embed = json.dumps(content, ensure_ascii=False)
             embedding = await embedder.aembed_query(text_to_embed)
         except Exception:
-            pass
+            logger.warning("memory.embedding_failed", type=type, exc_info=True)
 
         mem = LongTermMemory(
             user_id=user_id,
@@ -43,7 +46,11 @@ class LongTermMemoryStore:
         await self.db.flush()
 
         if embedding:
-            asyncio.create_task(self._write_to_milvus(mem.id, embedding, content))
+            task = asyncio.create_task(self._write_to_milvus(mem.id, embedding, content))
+            task.add_done_callback(
+                lambda t: logger.error("memory.milvus_write_failed", memory_id=mem.id,
+                                        error=str(t.exception())) if t.exception() else None
+            )
 
         return mem
 
@@ -51,16 +58,10 @@ class LongTermMemoryStore:
         try:
             from app.adapters.vector_store.milvus import MilvusStore
             store = MilvusStore()
-            await store.upsert(
-                "memories",
-                [{
-                    "memory_id": memory_id,
-                    "embedding": embedding,
-                    "text": json.dumps(content, ensure_ascii=False),
-                }],
-            )
+            text = json.dumps(content, ensure_ascii=False)
+            await store.upsert_memory(memory_id, embedding, text)
         except Exception:
-            pass
+            logger.warning("memory.milvus_upsert_failed", memory_id=memory_id, exc_info=True)
 
     async def search_by_embedding(
         self, query: str, user_id: str, top_k: int = 10
@@ -71,8 +72,8 @@ class LongTermMemoryStore:
             embedder = OpenAIEmbedding()
             qe = await embedder.aembed_query(query)
             store = MilvusStore()
-            hits = await store.search("memories", qe, top_k=top_k)
-            memory_ids = [h.memory_id for h in hits if hasattr(h, "memory_id")]
+            hits = await store.search_memories(qe, top_k=top_k)
+            memory_ids = [h.memory_id for h in hits if h.memory_id]
             if not memory_ids:
                 return []
             result = await self.db.execute(
@@ -84,6 +85,7 @@ class LongTermMemoryStore:
             )
             return list(result.scalars().all())
         except Exception:
+            logger.warning("memory.search_by_embedding_failed", exc_info=True)
             return []
 
     async def list_by_user(

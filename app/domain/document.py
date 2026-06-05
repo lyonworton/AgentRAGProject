@@ -14,6 +14,7 @@ class Document(Base, TimestampMixin):
     mime_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
     file_size: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
     embedding_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     language: Mapped[str | None] = mapped_column(String(10), nullable=True)
     metadata_: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)

@@ -50,9 +50,8 @@ async def _execute_task(
         if isinstance(result, Exception):
             warnings.append(f"Tool {name} failed: {result}")
         else:
-            for item in result:
-                item["_tool"] = name
-            hits.extend(result)
+            tagged = [dict(item, _tool=name) for item in result]
+            hits.extend(tagged)
 
     task["status"] = "failed" if not hits else "done"
     return hits, warnings

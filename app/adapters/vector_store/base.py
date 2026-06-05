@@ -8,6 +8,7 @@ class SearchResult:
     text: str
     score: float
     metadata: dict = field(default_factory=dict)
+    memory_id: str | None = None
 
 class BaseVectorStore(ABC):
     @abstractmethod

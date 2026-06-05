@@ -57,7 +57,7 @@ async def query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db), us
             await session_service.add_message(db, req.session_id, role="user", content=req.query)
             await session_service.add_message(
                 db, req.session_id, role="assistant", content=result["answer"],
-                trace_id=trace_id, citations=result.get("citations"),
+                trace_id=trace_id, citations=result["citations"],
             )
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 

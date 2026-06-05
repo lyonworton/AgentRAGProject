@@ -1,7 +1,10 @@
+import asyncio
 import json
+import structlog
 from app.memory.base import BaseMemoryStore
 
 DEFAULT_TTL = 86400  # 24h
+logger = structlog.get_logger()
 
 
 class ConversationMemory(BaseMemoryStore):
@@ -11,14 +14,24 @@ class ConversationMemory(BaseMemoryStore):
         self.redis = redis
 
     async def asave(self, key: str, data: dict, ttl: int | None = None) -> None:
-        await self.redis.set(key, json.dumps(data, default=str), ex=ttl or DEFAULT_TTL)
+        try:
+            await self.redis.set(key, json.dumps(data, default=str), ex=ttl or DEFAULT_TTL)
+        except Exception:
+            logger.warning("memory.redis_save_failed", key=key, exc_info=True)
 
     async def aload(self, key: str) -> dict | None:
-        raw = await self.redis.get(key)
-        return json.loads(raw) if raw else None
+        try:
+            raw = await self.redis.get(key)
+            return json.loads(raw) if raw else None
+        except Exception:
+            logger.warning("memory.redis_load_failed", key=key, exc_info=True)
+            return None
 
     async def adelete(self, key: str) -> None:
-        await self.redis.delete(key)
+        try:
+            await self.redis.delete(key)
+        except Exception:
+            logger.warning("memory.redis_delete_failed", key=key, exc_info=True)
 
     # ── Convenience methods ──────────────────────────────────────
 
@@ -36,7 +49,11 @@ class ConversationMemory(BaseMemoryStore):
 
     async def get_context(self, session_id: str) -> dict:
         keys = [f"session:{session_id}:{suffix}" for suffix in ("summary", "topic", "facts", "window")]
-        results = [await self.aload(k) for k in keys]
+        try:
+            results = await asyncio.gather(*[self.aload(k) for k in keys])
+        except Exception:
+            logger.warning("memory.get_context_failed", session_id=session_id, exc_info=True)
+            return {"summary": "", "topic": "", "facts": [], "window": []}
         summary, topic, facts, window = results
         return {
             "summary": (summary or {}).get("text", ""),
