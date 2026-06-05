@@ -78,6 +78,12 @@ services:
       ES_JAVA_OPTS: -Xms1g -Xmx1g
     volumes: [esdata:/usr/share/elasticsearch/data]
 
+  # === Phase 3 ===
+  frontend:
+    build: ./frontend
+    ports: ["3000:3000"]
+    depends_on: [fastapi]
+
 volumes:
   pgdata:
   minio_data:
