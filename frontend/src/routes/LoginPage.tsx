@@ -233,12 +233,12 @@ export function LoginPage() {
               }}>
                 <EyeBall size={15} pupilSize={6} maxDistance={4} eyeColor="white" pupilColor="#2D2D2D"
                   isBlinking={isPurpleBlinking}
-                  forceLookX={(password.length > 0 && showPassword) ? (isPurplePeeking ? 3 : -3) : isLookingAtEachOther ? 2.5 : undefined}
-                  forceLookY={(password.length > 0 && showPassword) ? (isPurplePeeking ? 4 : -3) : isLookingAtEachOther ? 3 : undefined} />
+                  forceLookX={(password.length > 0 && showPassword) ? -5 : isLookingAtEachOther ? 2.5 : undefined}
+                  forceLookY={(password.length > 0 && showPassword) ? 0 : isLookingAtEachOther ? 3 : undefined} />
                 <EyeBall size={15} pupilSize={6} maxDistance={4} eyeColor="white" pupilColor="#2D2D2D"
                   isBlinking={isPurpleBlinking}
-                  forceLookX={(password.length > 0 && showPassword) ? (isPurplePeeking ? 3 : -3) : isLookingAtEachOther ? 2.5 : undefined}
-                  forceLookY={(password.length > 0 && showPassword) ? (isPurplePeeking ? 4 : -3) : isLookingAtEachOther ? 3 : undefined} />
+                  forceLookX={(password.length > 0 && showPassword) ? -5 : isLookingAtEachOther ? 2.5 : undefined}
+                  forceLookY={(password.length > 0 && showPassword) ? 0 : isLookingAtEachOther ? 3 : undefined} />
               </div>
             </div>
 
@@ -261,12 +261,12 @@ export function LoginPage() {
               }}>
                 <EyeBall size={13} pupilSize={5} maxDistance={3} eyeColor="white" pupilColor="#2D2D2D"
                   isBlinking={isBlackBlinking}
-                  forceLookX={(password.length > 0 && showPassword) ? -3 : isLookingAtEachOther ? 0 : undefined}
-                  forceLookY={(password.length > 0 && showPassword) ? -3 : isLookingAtEachOther ? -3 : undefined} />
+                  forceLookX={(password.length > 0 && showPassword) ? -5 : isLookingAtEachOther ? 0 : undefined}
+                  forceLookY={(password.length > 0 && showPassword) ? 0 : isLookingAtEachOther ? -3 : undefined} />
                 <EyeBall size={13} pupilSize={5} maxDistance={3} eyeColor="white" pupilColor="#2D2D2D"
                   isBlinking={isBlackBlinking}
-                  forceLookX={(password.length > 0 && showPassword) ? -3 : isLookingAtEachOther ? 0 : undefined}
-                  forceLookY={(password.length > 0 && showPassword) ? -3 : isLookingAtEachOther ? -3 : undefined} />
+                  forceLookX={(password.length > 0 && showPassword) ? -5 : isLookingAtEachOther ? 0 : undefined}
+                  forceLookY={(password.length > 0 && showPassword) ? 0 : isLookingAtEachOther ? -3 : undefined} />
               </div>
             </div>
 
@@ -281,8 +281,8 @@ export function LoginPage() {
                 left: (password.length > 0 && showPassword) ? 40 : `${66 + (orangePos.faceX || 0)}px`,
                 top: (password.length > 0 && showPassword) ? 68 : `${72 + (orangePos.faceY || 0)}px`,
               }}>
-                <Pupil size={10} maxDistance={4} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -4 : undefined} forceLookY={(password.length > 0 && showPassword) ? -3 : undefined} />
-                <Pupil size={10} maxDistance={4} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -4 : undefined} forceLookY={(password.length > 0 && showPassword) ? -3 : undefined} />
+                <Pupil size={10} maxDistance={4} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? 0 : undefined} />
+                <Pupil size={10} maxDistance={4} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? 0 : undefined} />
               </div>
             </div>
 
@@ -297,8 +297,8 @@ export function LoginPage() {
                 left: (password.length > 0 && showPassword) ? 16 : `${42 + (yellowPos.faceX || 0)}px`,
                 top: (password.length > 0 && showPassword) ? 28 : `${32 + (yellowPos.faceY || 0)}px`,
               }}>
-                <Pupil size={10} maxDistance={4} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -4 : undefined} forceLookY={(password.length > 0 && showPassword) ? -3 : undefined} />
-                <Pupil size={10} maxDistance={4} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -4 : undefined} forceLookY={(password.length > 0 && showPassword) ? -3 : undefined} />
+                <Pupil size={10} maxDistance={4} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? 0 : undefined} />
+                <Pupil size={10} maxDistance={4} pupilColor="#2D2D2D" forceLookX={(password.length > 0 && showPassword) ? -5 : undefined} forceLookY={(password.length > 0 && showPassword) ? 0 : undefined} />
               </div>
               <div className="absolute w-16 h-[3px] bg-[#2D2D2D] rounded-full transition-all duration-200 ease-out" style={{
                 left: (password.length > 0 && showPassword) ? 8 : `${32 + (yellowPos.faceX || 0)}px`,
