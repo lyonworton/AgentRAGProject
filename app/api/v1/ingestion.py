@@ -58,6 +58,58 @@ async def list_ingest_jobs(
     result = await db.execute(q)
     return result.scalars().all()
 
+class WebIngestRequest(BaseModel):
+    collection_id: str
+    urls: list[str]
+
+
+class DatabaseIngestRequest(BaseModel):
+    collection_id: str
+    db_url: str
+    query: str
+    title_column: str
+    content_columns: list[str]
+
+
+@router.post("/web")
+async def ingest_web(req: WebIngestRequest, db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)):
+    col = await collection_service.get_collection(db, req.collection_id)
+    if not col or col.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    job = IngestJob(collection_id=req.collection_id, user_id=user.id, source_type="web",
+                    config_snapshot={"urls": req.urls})
+    db.add(job); await db.commit(); await db.refresh(job)
+    arq_job_id = await enqueue_ingest(
+        str(job.id), req.collection_id, user.id,
+        source_type="web", source_config={"urls": req.urls},
+    )
+    return {"job_id": job.id, "arq_job_id": arq_job_id}
+
+
+@router.post("/database")
+async def ingest_database(req: DatabaseIngestRequest, db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)):
+    col = await collection_service.get_collection(db, req.collection_id)
+    if not col or col.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    job = IngestJob(collection_id=req.collection_id, user_id=user.id, source_type="database",
+                    config_snapshot={"db_url": req.db_url, "query": req.query,
+                                     "title_column": req.title_column,
+                                     "content_columns": req.content_columns})
+    db.add(job); await db.commit(); await db.refresh(job)
+    arq_job_id = await enqueue_ingest(
+        str(job.id), req.collection_id, user.id,
+        source_type="database",
+        source_config={
+            "db_url": req.db_url, "query": req.query,
+            "title_column": req.title_column,
+            "content_columns": req.content_columns,
+        },
+    )
+    return {"job_id": job.id, "arq_job_id": arq_job_id}
+
+
 class IngestJobResponse(BaseModel):
     id: str; status: str; total_docs: int; completed_docs: int
     failed_docs: int; errors: list; started_at: str | None; completed_at: str | None
