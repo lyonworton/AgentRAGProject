@@ -1,6 +1,7 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from pydantic import BaseModel
 from app.core.di import get_db
 from app.core.config import get_settings
@@ -36,6 +37,26 @@ async def ingest_local(collection_id: str = Form(...), files: list[UploadFile] =
         source_config={"file_paths": saved},
     )
     return {"job_id": job.id, "arq_job_id": arq_job_id, "file_count": len(saved)}
+
+class IngestJobListItem(BaseModel):
+    id: str; collection_id: str; source_type: str; status: str
+    total_docs: int; completed_docs: int; failed_docs: int
+    errors: list; started_at: str | None; completed_at: str | None; created_at: str | None
+    model_config = {"from_attributes": True}
+
+@router.get("", response_model=list[IngestJobListItem])
+async def list_ingest_jobs(
+    collection_id: str | None = None,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    q = select(IngestJob).where(IngestJob.user_id == user.id)
+    if collection_id:
+        q = q.where(IngestJob.collection_id == collection_id)
+    q = q.order_by(IngestJob.created_at.desc()).limit(limit)
+    result = await db.execute(q)
+    return result.scalars().all()
 
 class IngestJobResponse(BaseModel):
     id: str; status: str; total_docs: int; completed_docs: int
