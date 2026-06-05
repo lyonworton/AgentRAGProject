@@ -71,6 +71,16 @@ async def add_message(
     return msg
 
 
+async def list_sessions(db: AsyncSession, user_id: str, limit: int = 50) -> list[Session]:
+    result = await db.execute(
+        select(Session)
+        .where(Session.user_id == user_id, Session.is_active == True)
+        .order_by(Session.last_activity_at.desc().nullslast())
+        .limit(limit)
+    )
+    return list(result.scalars().all())
+
+
 async def update_session_context(
     memory: ConversationMemory, session_id: str,
     summary: str | None = None, topic: str | None = None,

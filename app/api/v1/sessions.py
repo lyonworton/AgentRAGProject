@@ -52,6 +52,14 @@ async def create_session(
     return await session_service.create_session(db, user.id, req.collection_id, req.title)
 
 
+@router.get("", response_model=list[SessionResponse])
+async def list_sessions(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return await session_service.list_sessions(db, user.id)
+
+
 @router.get("/{session_id}", response_model=SessionResponse)
 async def get_session(
     session_id: str,
@@ -81,7 +89,8 @@ async def get_history(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    msgs = await session_service.get_history(db, session_id, user.id)
-    if not msgs and not await session_service.get_session(db, session_id, user.id):
+    s = await session_service.get_session(db, session_id, user.id)
+    if not s:
         raise HTTPException(status_code=404, detail="Session not found")
+    msgs = await session_service.get_history(db, session_id, user.id)
     return HistoryResponse(messages=msgs)
