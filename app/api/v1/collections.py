@@ -13,7 +13,8 @@ class CreateCollectionRequest(BaseModel):
     description: str | None = None
 
 class CollectionResponse(BaseModel):
-    id: str; name: str; description: str | None; doc_count: int; status: str
+    id: str; name: str; description: str | None; config: dict | None
+    doc_count: int; chunk_count: int; status: str
     model_config = {"from_attributes": True}
 
 @router.post("", response_model=CollectionResponse, status_code=201)
@@ -24,6 +25,14 @@ async def create_collection(req: CreateCollectionRequest, db: AsyncSession = Dep
 @router.get("", response_model=list[CollectionResponse])
 async def list_collections(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     return await collection_service.list_collections(db, user.id)
+
+@router.get("/{col_id}", response_model=CollectionResponse)
+async def get_collection(col_id: str, db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)):
+    col = await collection_service.get_collection(db, col_id)
+    if not col or col.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return col
 
 @router.delete("/{col_id}", status_code=204)
 async def delete_collection(col_id: str, db: AsyncSession = Depends(get_db),
