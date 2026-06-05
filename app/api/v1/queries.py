@@ -7,6 +7,7 @@ from app.core.di import get_db
 from app.api.deps import get_current_user
 from app.domain.user import User
 from app.services.rag_service import get_rag_service
+from app.services import session_service
 
 router = APIRouter(prefix="/query", tags=["queries"])
 
@@ -51,7 +52,13 @@ async def query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db), us
         for i in range(0, len(chunks), 5):
             text = " ".join(chunks[i:i+5])
             yield f"event: chunk\ndata: {json.dumps({'text': text + ' ', 'citations': []})}\n\n"
-        yield f"event: done\ndata: {json.dumps({'trace_id': trace_id, 'iterations': result['agent_trace']['iterations'], 'quality_score': result['agent_trace']['quality_score']})}\n\n"
+        yield f"event: done\ndata: {json.dumps({'trace_id': trace_id, 'citations': result['citations'], 'iterations': result['agent_trace']['iterations'], 'quality_score': result['agent_trace']['quality_score']})}\n\n"
+        if req.session_id:
+            await session_service.add_message(db, req.session_id, role="user", content=req.query)
+            await session_service.add_message(
+                db, req.session_id, role="assistant", content=result["answer"],
+                trace_id=trace_id, citations=result.get("citations"),
+            )
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 @router.get("/{trace_id}/trace")
