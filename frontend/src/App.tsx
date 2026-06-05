@@ -10,10 +10,9 @@ const CollectionDetail = lazy(() => import('@/routes/admin/CollectionDetail').th
 const Ingestion = lazy(() => import('@/routes/admin/Ingestion').then(m => ({ default: m.Ingestion })))
 const IngestionJobs = lazy(() => import('@/routes/admin/IngestionJobs').then(m => ({ default: m.IngestionJobs })))
 const ChatLayout = lazy(() => import('@/routes/chat/ChatLayout').then(m => ({ default: m.ChatLayout })))
-const ChatView = lazy(() => import('@/routes/chat/ChatView').then(m => ({ default: m.ChatView })))
 
 function Loading() {
-  return <div className="flex items-center justify-center h-screen text-muted-foreground">加载中...</div>
+  return <div className="flex items-center justify-center h-screen text-muted-foreground">{'加载中...'}</div>
 }
 
 export default function App() {
@@ -30,10 +29,7 @@ export default function App() {
               <Route path="ingestion" element={<Ingestion />} />
               <Route path="ingestion/jobs" element={<IngestionJobs />} />
             </Route>
-            <Route path="/chat" element={<ChatLayout />}>
-              <Route index element={<ChatView />} />
-              <Route path=":sessionId" element={<ChatView />} />
-            </Route>
+            <Route path="/chat/:sessionId?" element={<ChatLayout />} />
             <Route path="/" element={<Navigate to="/admin" />} />
           </Routes>
         </Suspense>
