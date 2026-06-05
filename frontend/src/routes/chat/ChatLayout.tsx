@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Menu, Plus, MessageSquare } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
+import { Menu, Plus, MessageSquare, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SessionList } from './SessionList'
 import { ChatView } from './ChatView'
@@ -52,6 +52,11 @@ export function ChatLayout() {
             <Menu className="h-4 w-4" />
           </Button>
           <span className="font-medium text-sm">{'对话'}</span>
+          <div className="flex-1" />
+          <Link to="/admin" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            {'管理'}
+          </Link>
         </header>
         <ChatView selectedCollectionId={selectedColId} />
       </div>

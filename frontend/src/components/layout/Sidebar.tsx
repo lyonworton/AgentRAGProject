@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Database, Upload, ListTodo } from 'lucide-react'
+import { LayoutDashboard, Database, Upload, ListTodo, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const items = [
@@ -7,6 +7,10 @@ const items = [
   { to: '/admin/collections', icon: Database, label: '知识库' },
   { to: '/admin/ingestion', icon: Upload, label: '摄入' },
   { to: '/admin/ingestion/jobs', icon: ListTodo, label: '任务' },
+]
+
+const bottomItems = [
+  { to: '/chat', icon: MessageSquare, label: '对话', end: false },
 ]
 
 export function Sidebar() {
@@ -35,6 +39,25 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+      <div className="p-2 border-t">
+        {bottomItems.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              )
+            }
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </NavLink>
+        ))}
+      </div>
     </aside>
   )
 }

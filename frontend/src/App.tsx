@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from '@/context/AuthContext'
+import { AuthProvider, useAuth } from '@/context/AuthContext'
+import { RequireAuth } from '@/components/RequireAuth'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoginPage } from '@/routes/LoginPage'
 
@@ -15,21 +16,27 @@ function Loading() {
   return <div className="flex items-center justify-center h-screen text-muted-foreground">{'加载中...'}</div>
 }
 
+function LoginGuard() {
+  const { isAuthenticated } = useAuth()
+  if (isAuthenticated) return <Navigate to="/admin" replace />
+  return <LoginPage />
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Suspense fallback={<Loading />}>
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/admin" element={<AppShell />}>
+            <Route path="/login" element={<LoginGuard />} />
+            <Route path="/admin" element={<RequireAuth><AppShell /></RequireAuth>}>
               <Route index element={<Dashboard />} />
               <Route path="collections" element={<Collections />} />
               <Route path="collections/:id" element={<CollectionDetail />} />
               <Route path="ingestion" element={<Ingestion />} />
               <Route path="ingestion/jobs" element={<IngestionJobs />} />
             </Route>
-            <Route path="/chat/:sessionId?" element={<ChatLayout />} />
+            <Route path="/chat/:sessionId?" element={<RequireAuth><ChatLayout /></RequireAuth>} />
             <Route path="/" element={<Navigate to="/admin" />} />
           </Routes>
         </Suspense>
