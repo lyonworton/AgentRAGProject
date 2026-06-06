@@ -7,7 +7,6 @@ import {
   ListTodo,
   MessageSquare,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import {
   ProfileSection,
@@ -17,54 +16,38 @@ import {
 } from "@/components/ui/animated-sidebar";
 
 const items = [
-  {
-    to: "/admin",
-    icon: LayoutDashboard,
-    label: "Dashboard",
-    end: true,
-  },
-  {
-    to: "/admin/collections",
-    icon: Database,
-    label: "Collections",
-  },
-  {
-    to: "/admin/ingestion",
-    icon: Upload,
-    label: "Ingestion",
-  },
-  {
-    to: "/admin/ingestion/jobs",
-    icon: ListTodo,
-    label: "Jobs",
-  },
-  {
-    to: "/chat",
-    icon: MessageSquare,
-    label: "Chat",
-  },
+  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
+  { to: "/admin/collections", icon: Database, label: "Collections" },
+  { to: "/admin/ingestion", icon: Upload, label: "Ingestion" },
+  { to: "/admin/ingestion/jobs", icon: ListTodo, label: "Jobs" },
+  { to: "/chat", icon: MessageSquare, label: "Chat" },
 ];
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+    <nav
+      className="flex-1 p-3 space-y-1 overflow-y-auto"
+      style={{ color: "#4b5563" }}
+    >
       {items.map(({ to, icon: Icon, label, end }) => (
         <NavLink
           key={to}
           to={to}
           end={end}
           onClick={onNavigate}
-          className={({ isActive }) =>
-            cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
-              isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            )
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          style={({ isActive }) =>
+            isActive
+              ? { backgroundColor: "#eff6ff", color: "#2563eb" }
+              : { color: "#4b5563" }
           }
         >
-          <Icon className="h-4 w-4 shrink-0" />
-          {label}
+          {({ isActive }) => (
+            <>
+              <Icon className="h-4 w-4 shrink-0" style={{ color: isActive ? "#2563eb" : "#6b7280" }} />
+              {label}
+            </>
+          )}
         </NavLink>
       ))}
     </nav>
@@ -84,11 +67,12 @@ export function Sidebar() {
 
   return (
     <>
-      {/* ── Desktop ── */}
       <DesktopSidebar>{sidebarContent}</DesktopSidebar>
 
-      {/* ── Mobile top bar ── */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 border-b bg-background flex items-center px-4">
+      <div
+        className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 flex items-center px-4 border-b"
+        style={{ backgroundColor: "#fff", borderColor: "#e5e7eb", color: "#111827" }}
+      >
         <AnimatedMenuToggle
           toggle={() => setMobileOpen((v) => !v)}
           isOpen={mobileOpen}
@@ -96,11 +80,7 @@ export function Sidebar() {
         <span className="ml-3 font-bold text-lg">AgentRAG</span>
       </div>
 
-      {/* ── Mobile overlay ── */}
-      <MobileSidebar
-        isOpen={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-      >
+      <MobileSidebar isOpen={mobileOpen} onClose={() => setMobileOpen(false)}>
         {sidebarContent}
       </MobileSidebar>
     </>

@@ -30,15 +30,19 @@ export function ChatLayout() {
     <>
       <ProfileSection username={user?.username ?? "User"} />
 
-      {/* Collection selector */}
-      <div className="p-3 border-b shrink-0">
-        {(!cols || cols.length === 0) ? (
-          <p className="text-xs text-muted-foreground">
+      <div className="p-3 border-b" style={{ borderColor: "#e5e7eb" }}>
+        {!cols || cols.length === 0 ? (
+          <p className="text-xs" style={{ color: "#6b7280" }}>
             Create a collection in Admin first
           </p>
         ) : (
           <select
-            className="w-full h-9 rounded-xl border border-input bg-background px-3 py-1 text-sm"
+            className="w-full h-9 rounded-xl px-3 py-1 text-sm"
+            style={{
+              border: "1px solid #e5e7eb",
+              backgroundColor: "#fff",
+              color: "#111827",
+            }}
             value={selectedColId}
             onChange={(e) => setSelectedColId(e.target.value)}
           >
@@ -51,8 +55,7 @@ export function ChatLayout() {
         )}
       </div>
 
-      {/* New session */}
-      <div className="p-2 border-b shrink-0">
+      <div className="p-2 border-b" style={{ borderColor: "#e5e7eb" }}>
         <Button
           variant="outline"
           size="sm"
@@ -67,17 +70,16 @@ export function ChatLayout() {
         </Button>
       </div>
 
-      {/* Session list */}
       <SessionList onClose={() => setShowSidebar(false)} />
 
-      {/* Admin link */}
-      <div className="p-3 border-t shrink-0">
+      <div className="p-3 border-t" style={{ borderColor: "#e5e7eb" }}>
         <Link
           to="/admin"
           onClick={() => setShowSidebar(false)}
-          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          style={{ color: "#4b5563" }}
         >
-          <LayoutDashboard className="h-4 w-4 shrink-0" />
+          <LayoutDashboard className="h-4 w-4 shrink-0" style={{ color: "#6b7280" }} />
           Admin
         </Link>
       </div>
@@ -86,10 +88,8 @@ export function ChatLayout() {
 
   return (
     <div className="flex h-screen">
-      {/* ── Desktop sidebar ── */}
       <DesktopSidebar>{sidebarContent}</DesktopSidebar>
 
-      {/* ── Mobile overlay ── */}
       <MobileSidebar
         isOpen={showSidebar}
         onClose={() => setShowSidebar(false)}
@@ -97,19 +97,24 @@ export function ChatLayout() {
         {sidebarContent}
       </MobileSidebar>
 
-      {/* ── Main area ── */}
       <div className="flex-1 flex flex-col min-w-0 md:ml-64">
-        {/* Mobile header */}
-        <header className="md:hidden h-14 border-b flex items-center px-4 shrink-0 bg-background">
+        <header
+          className="md:hidden h-14 flex items-center px-4 shrink-0 border-b"
+          style={{ backgroundColor: "#fff", borderColor: "#e5e7eb" }}
+        >
           <AnimatedMenuToggle
             toggle={() => setShowSidebar((v) => !v)}
             isOpen={showSidebar}
           />
-          <span className="ml-3 font-bold text-lg">AgentRAG</span>
+          <span className="ml-3 font-bold text-lg" style={{ color: "#111827" }}>
+            AgentRAG
+          </span>
         </header>
 
-        {/* Desktop header */}
-        <header className="hidden md:flex h-14 border-b items-center px-4 shrink-0">
+        <header
+          className="hidden md:flex h-14 border-b items-center px-4 shrink-0"
+          style={{ borderColor: "#e5e7eb", color: "#111827" }}
+        >
           <span className="font-medium text-sm">Chat</span>
         </header>
 

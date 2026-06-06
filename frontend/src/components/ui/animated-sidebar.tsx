@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User } from "lucide-react";
 
@@ -19,6 +19,7 @@ export function AnimatedMenuToggle({
       <motion.div
         animate={{ y: isOpen ? 13 : 0 }}
         transition={{ duration: 0.3 }}
+        style={{ color: "#111827" }}
       >
         <motion.svg
           width="20"
@@ -27,7 +28,6 @@ export function AnimatedMenuToggle({
           initial="closed"
           animate={isOpen ? "open" : "closed"}
           transition={{ duration: 0.3 }}
-          className="text-foreground"
         >
           <motion.path
             fill="transparent"
@@ -75,15 +75,17 @@ export function ProfileSection({
   email?: string;
 }) {
   return (
-    <div className="p-4 border-b border-border">
+    <div className="p-4 border-b border-[#e5e7eb]">
       <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center shrink-0">
-          <User className="h-5 w-5 text-muted-foreground" />
+        <div className="w-10 h-10 bg-[#e5e7eb] rounded-full flex items-center justify-center shrink-0">
+          <User className="h-5 w-5" style={{ color: "#6b7280" }} />
         </div>
         <div className="min-w-0">
-          <p className="font-semibold text-sm truncate">{username}</p>
+          <p className="font-semibold text-sm truncate" style={{ color: "#111827" }}>
+            {username}
+          </p>
           {email && (
-            <p className="text-xs text-muted-foreground truncate">{email}</p>
+            <p className="text-xs truncate" style={{ color: "#6b7280" }}>{email}</p>
           )}
         </div>
       </div>
@@ -105,22 +107,22 @@ export function MobileSidebar({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden fixed inset-0 bg-black/40 z-40"
+            className="md:hidden fixed inset-0 z-40"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
             onClick={onClose}
           />
-          {/* panel */}
           <motion.div
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-background text-foreground shadow-xl flex flex-col"
+            className="md:hidden fixed inset-y-0 left-0 z-50 w-64 shadow-xl flex flex-col"
+            style={{ backgroundColor: "#fff", color: "#111827" }}
           >
             {children}
           </motion.div>
@@ -133,7 +135,10 @@ export function MobileSidebar({
 /* ── DesktopSidebar ── */
 export function DesktopSidebar({ children }: { children: ReactNode }) {
   return (
-    <div className="hidden md:flex flex-col fixed top-0 left-0 h-full w-64 bg-background text-foreground border-r shadow-sm">
+    <div
+      className="hidden md:flex flex-col fixed top-0 left-0 h-full w-64 border-r shadow-sm"
+      style={{ backgroundColor: "#fff", color: "#111827", borderColor: "#e5e7eb" }}
+    >
       {children}
     </div>
   );
