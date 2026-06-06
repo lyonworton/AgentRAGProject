@@ -1,65 +1,120 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { Menu, Plus, MessageSquare, LayoutDashboard } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { SessionList } from './SessionList'
-import { ChatView } from './ChatView'
-import { useCollections } from '@/hooks/useCollections'
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Plus, LayoutDashboard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SessionList } from "./SessionList";
+import { ChatView } from "./ChatView";
+import { useCollections } from "@/hooks/useCollections";
+import { useAuth } from "@/context/AuthContext";
+import {
+  ProfileSection,
+  DesktopSidebar,
+  MobileSidebar,
+  AnimatedMenuToggle,
+} from "@/components/ui/animated-sidebar";
 
 export function ChatLayout() {
-  const [showSidebar, setShowSidebar] = useState(false)
-  const { data: cols } = useCollections()
-  const [selectedColId, setSelectedColId] = useState('')
-  const navigate = useNavigate()
+  const [showSidebar, setShowSidebar] = useState(false);
+  const { data: cols } = useCollections();
+  const [selectedColId, setSelectedColId] = useState("");
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (cols && cols.length > 0 && !selectedColId) {
-      setSelectedColId(cols[0].id)
+      setSelectedColId(cols[0].id);
     }
-  }, [cols, selectedColId])
+  }, [cols, selectedColId]);
+
+  const sidebarContent = (
+    <>
+      <ProfileSection username={user?.username ?? "User"} />
+
+      {/* Collection selector */}
+      <div className="p-3 border-b shrink-0">
+        {(!cols || cols.length === 0) ? (
+          <p className="text-xs text-muted-foreground">
+            Create a collection in Admin first
+          </p>
+        ) : (
+          <select
+            className="w-full h-9 rounded-xl border border-input bg-background px-3 py-1 text-sm"
+            value={selectedColId}
+            onChange={(e) => setSelectedColId(e.target.value)}
+          >
+            {cols.map((c: any) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {/* New session */}
+      <div className="p-2 border-b shrink-0">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full rounded-xl"
+          onClick={() => {
+            navigate("/chat");
+            setShowSidebar(false);
+          }}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          New Session
+        </Button>
+      </div>
+
+      {/* Session list */}
+      <SessionList onClose={() => setShowSidebar(false)} />
+
+      {/* Admin link */}
+      <div className="p-3 border-t shrink-0">
+        <Link
+          to="/admin"
+          onClick={() => setShowSidebar(false)}
+          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          <LayoutDashboard className="h-4 w-4 shrink-0" />
+          Admin
+        </Link>
+      </div>
+    </>
+  );
 
   return (
     <div className="flex h-screen">
-      <div className={`${showSidebar ? 'flex' : 'hidden'} md:flex w-72 border-r bg-muted/30 flex-col shrink-0`}>
-        <div className="h-14 flex items-center justify-between px-4 border-b shrink-0">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            <span className="font-bold text-lg">AgentRAG</span>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => setShowSidebar(false)} className="md:hidden">
-            <Menu className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="p-3 border-b shrink-0">
-          {(!cols || cols.length === 0) ? (
-            <p className="text-xs text-muted-foreground">{'请先在 Admin 创建知识库'}</p>
-          ) : (
-            <select className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm" value={selectedColId} onChange={e => setSelectedColId(e.target.value)}>
-              {cols.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          )}
-        </div>
-        <div className="p-2 border-b shrink-0">
-          <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/chat')}>
-            <Plus className="h-4 w-4 mr-1" /> {'新会话'}
-          </Button>
-        </div>
-        <SessionList onClose={() => setShowSidebar(false)} />
-      </div>
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b flex items-center px-4 shrink-0">
-          <Button variant="ghost" size="icon" onClick={() => setShowSidebar(true)} className="md:hidden mr-2">
-            <Menu className="h-4 w-4" />
-          </Button>
-          <span className="font-medium text-sm">{'对话'}</span>
-          <div className="flex-1" />
-          <Link to="/admin" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            {'管理'}
-          </Link>
+      {/* ── Desktop sidebar ── */}
+      <DesktopSidebar>{sidebarContent}</DesktopSidebar>
+
+      {/* ── Mobile overlay ── */}
+      <MobileSidebar
+        isOpen={showSidebar}
+        onClose={() => setShowSidebar(false)}
+      >
+        {sidebarContent}
+      </MobileSidebar>
+
+      {/* ── Main area ── */}
+      <div className="flex-1 flex flex-col min-w-0 md:ml-64">
+        {/* Mobile header */}
+        <header className="md:hidden h-14 border-b flex items-center px-4 shrink-0 bg-background">
+          <AnimatedMenuToggle
+            toggle={() => setShowSidebar((v) => !v)}
+            isOpen={showSidebar}
+          />
+          <span className="ml-3 font-bold text-lg">AgentRAG</span>
         </header>
+
+        {/* Desktop header */}
+        <header className="hidden md:flex h-14 border-b items-center px-4 shrink-0">
+          <span className="font-medium text-sm">Chat</span>
+        </header>
+
         <ChatView selectedCollectionId={selectedColId} />
       </div>
     </div>
-  )
+  );
 }

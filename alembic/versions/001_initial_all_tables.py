@@ -12,6 +12,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+from pgvector.sqlalchemy import Vector
 
 revision: str = "001"
 down_revision: Union[str, None] = None
@@ -162,7 +163,7 @@ def upgrade() -> None:
         sa.Column("type", sa.String(16)),
         sa.Column("entity", sa.String(256), nullable=True),
         sa.Column("content", postgresql.JSONB, server_default=sa.text("'{}'::jsonb")),
-        sa.Column("embedding", postgresql.JSONB, nullable=True),
+        sa.Column("embedding", Vector(1024), nullable=True),
         sa.Column("confidence", sa.Float, server_default="1.0"),
         sa.Column("source_trace_id", sa.String(64), nullable=True),
         sa.Column("status", sa.String(16), server_default="active"),
