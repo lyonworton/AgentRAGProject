@@ -11,7 +11,7 @@ export function useDocuments(colId: string | undefined) {
     setLoading(true)
     listDocuments(colId)
       .then(d => { setData(d); setError(null) })
-      .catch(e => { setData(null); setError(e?.message || '加载失败') })
+      .catch(e => { setData(null); setError(e?.message || 'Load failed') })
       .finally(() => setLoading(false))
   }
 

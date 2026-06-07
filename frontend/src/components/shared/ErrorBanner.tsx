@@ -12,7 +12,7 @@ export function ErrorBanner({ message, onRetry }: Props) {
       <AlertCircle className="h-8 w-8 text-destructive" />
       <p className="text-sm text-destructive">{message}</p>
       {onRetry && (
-        <Button variant="outline" size="sm" onClick={onRetry}>重试</Button>
+        <Button variant="outline" size="sm" onClick={onRetry}>Retry</Button>
       )}
     </div>
   )

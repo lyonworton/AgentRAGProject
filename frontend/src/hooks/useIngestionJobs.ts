@@ -10,7 +10,7 @@ export function useIngestionJobs(params?: { collection_id?: string; limit?: numb
     setLoading(true)
     listIngestJobs(params)
       .then((d: IngestJob[]) => { setData(d); setError(null) })
-      .catch((e: Error) => { setData(null); setError(e?.message || '加载失败') })
+      .catch((e: Error) => { setData(null); setError(e?.message || 'Load failed') })
       .finally(() => setLoading(false))
   }
 

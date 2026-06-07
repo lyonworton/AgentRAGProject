@@ -1,19 +1,30 @@
-import { useAuth } from '@/context/AuthContext'
-import { Button } from '@/components/ui/button'
-import { LogOut } from 'lucide-react'
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
+import { HamburgerToggle } from "@/components/ui/animated-sidebar";
 
-export function Header() {
-  const { user, logout } = useAuth()
+interface HeaderProps {
+  mobileOpen: boolean;
+  onToggleMobile: () => void;
+}
+
+export function Header({ mobileOpen, onToggleMobile }: HeaderProps) {
+  const { user, logout } = useAuth();
 
   return (
-    <header className="h-14 border-b flex items-center justify-between px-6 shrink-0">
-      <span className="text-sm text-muted-foreground">欢迎回来</span>
+    <header className="h-14 border-b flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium">{user?.username ?? '未登录'}</span>
-        <Button variant="ghost" size="sm" onClick={logout}>
-          <LogOut className="h-4 w-4 mr-1" /> 登出
-        </Button>
+        <span className="md:hidden">
+          <HamburgerToggle toggle={onToggleMobile} isOpen={mobileOpen} />
+        </span>
+        <span className="text-sm text-muted-foreground">
+          {user?.username ?? "User"}
+        </span>
       </div>
+      <Button variant="ghost" size="sm" onClick={logout}>
+        <LogOut className="h-4 w-4 mr-1" />
+        Logout
+      </Button>
     </header>
-  )
+  );
 }

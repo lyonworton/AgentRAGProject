@@ -1,24 +1,22 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Plus, LayoutDashboard } from "lucide-react";
+import { Plus, MessageSquare, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SessionList } from "./SessionList";
 import { ChatView } from "./ChatView";
 import { useCollections } from "@/hooks/useCollections";
-import { useAuth } from "@/context/AuthContext";
 import {
+  HamburgerToggle,
   ProfileSection,
-  DesktopSidebar,
-  MobileSidebar,
-  AnimatedMenuToggle,
+  MobileSidebarShell,
 } from "@/components/ui/animated-sidebar";
 
 export function ChatLayout() {
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { data: cols } = useCollections();
   const [selectedColId, setSelectedColId] = useState("");
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const close = () => setMobileOpen(false);
 
   useEffect(() => {
     if (cols && cols.length > 0 && !selectedColId) {
@@ -26,23 +24,18 @@ export function ChatLayout() {
     }
   }, [cols, selectedColId]);
 
-  const sidebarContent = (
-    <>
-      <ProfileSection username={user?.username ?? "User"} />
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      <ProfileSection />
 
-      <div className="p-3 border-b" style={{ borderColor: "#e5e7eb" }}>
-        {!cols || cols.length === 0 ? (
-          <p className="text-xs" style={{ color: "#6b7280" }}>
+      <div className="p-3 border-y shrink-0">
+        {(!cols || cols.length === 0) ? (
+          <p className="text-xs text-muted-foreground px-1">
             Create a collection in Admin first
           </p>
         ) : (
           <select
-            className="w-full h-9 rounded-xl px-3 py-1 text-sm"
-            style={{
-              border: "1px solid #e5e7eb",
-              backgroundColor: "#fff",
-              color: "#111827",
-            }}
+            className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
             value={selectedColId}
             onChange={(e) => setSelectedColId(e.target.value)}
           >
@@ -55,14 +48,14 @@ export function ChatLayout() {
         )}
       </div>
 
-      <div className="p-2 border-b" style={{ borderColor: "#e5e7eb" }}>
+      <div className="p-2 border-b shrink-0">
         <Button
           variant="outline"
           size="sm"
           className="w-full rounded-xl"
           onClick={() => {
             navigate("/chat");
-            setShowSidebar(false);
+            close();
           }}
         >
           <Plus className="h-4 w-4 mr-1" />
@@ -70,54 +63,49 @@ export function ChatLayout() {
         </Button>
       </div>
 
-      <SessionList onClose={() => setShowSidebar(false)} />
+      <div className="flex-1 overflow-y-auto">
+        <SessionList onClose={close} />
+      </div>
 
-      <div className="p-3 border-t" style={{ borderColor: "#e5e7eb" }}>
+      <div className="p-3 border-t shrink-0">
         <Link
           to="/admin"
-          onClick={() => setShowSidebar(false)}
-          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
-          style={{ color: "#4b5563" }}
+          onClick={close}
+          className="flex items-center gap-2 w-full py-2 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
         >
-          <LayoutDashboard className="h-4 w-4 shrink-0" style={{ color: "#6b7280" }} />
+          <LayoutDashboard className="h-4 w-4" />
           Admin
         </Link>
       </div>
-    </>
+    </div>
   );
 
   return (
     <div className="flex h-screen">
-      <DesktopSidebar>{sidebarContent}</DesktopSidebar>
+      {/* Mobile overlay */}
+      <MobileSidebarShell isOpen={mobileOpen} onClose={close}>
+        <SidebarContent />
+      </MobileSidebarShell>
 
-      <MobileSidebar
-        isOpen={showSidebar}
-        onClose={() => setShowSidebar(false)}
-      >
-        {sidebarContent}
-      </MobileSidebar>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex flex-col w-72 bg-background border-r shrink-0">
+        <SidebarContent />
+      </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 md:ml-64">
-        <header
-          className="md:hidden h-14 flex items-center px-4 shrink-0 border-b"
-          style={{ backgroundColor: "#fff", borderColor: "#e5e7eb" }}
-        >
-          <AnimatedMenuToggle
-            toggle={() => setShowSidebar((v) => !v)}
-            isOpen={showSidebar}
-          />
-          <span className="ml-3 font-bold text-lg" style={{ color: "#111827" }}>
-            AgentRAG
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-14 border-b flex items-center px-4 shrink-0">
+          <span className="md:hidden mr-2">
+            <HamburgerToggle
+              toggle={() => setMobileOpen(!mobileOpen)}
+              isOpen={mobileOpen}
+            />
           </span>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            <span className="font-bold text-lg">AgentRAG</span>
+          </div>
         </header>
-
-        <header
-          className="hidden md:flex h-14 border-b items-center px-4 shrink-0"
-          style={{ borderColor: "#e5e7eb", color: "#111827" }}
-        >
-          <span className="font-medium text-sm">Chat</span>
-        </header>
-
         <ChatView selectedCollectionId={selectedColId} />
       </div>
     </div>

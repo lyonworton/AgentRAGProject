@@ -36,8 +36,8 @@ async def run_graph_path(doc) -> None:
     if not candidates:
         return
 
-    from app.adapters.llm.openai import OpenAILLM
-    llm = OpenAILLM()
+    from app.core.llm_factory import get_llm
+    llm = get_llm()
     result = await extract_relations(doc.content, candidates, llm)
 
     kg_store = await get_kg_store()

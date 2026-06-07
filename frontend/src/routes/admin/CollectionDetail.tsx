@@ -26,10 +26,10 @@ export function CollectionDetail() {
   const [searching, setSearching] = useState(false)
 
   async function handleDeleteDoc(docId: string) {
-    if (!id || !confirm('确定删除此文档？')) return
+    if (!id || !confirm('Delete this document?')) return
     setDelId(docId)
     try { await deleteDocument(id, docId); rDocs() }
-    catch (e: any) { alert(e?.message || '删除失败') }
+    catch (e: any) { alert(e?.message || 'Delete failed') }
     finally { setDelId(null) }
   }
 
@@ -40,25 +40,25 @@ export function CollectionDetail() {
       const r = await queryRAG(sq, [id])
       setSr(r)
     } catch (e: any) {
-      setSr({ error: e?.message || '搜索失败' })
+      setSr({ error: e?.message || 'Search failed' })
     } finally { setSearching(false) }
   }
 
   if (cl) return <LoadingSpinner />
   if (ce) return <ErrorBanner message={ce} />
-  if (!col) return <EmptyState title="知识库不存在" />
+  if (!col) return <EmptyState title="Collection not found" />
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'docs', label: '文档' },
-    { key: 'config', label: '配置' },
-    { key: 'search', label: '搜索测试' },
+    { key: 'docs', label: 'Documents' },
+    { key: 'config', label: 'Config' },
+    { key: 'search', label: 'Search Test' },
   ]
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold">{col.name}</h1>
-        <p className="text-sm text-muted-foreground">{col.description || '无描述'}</p>
+        <p className="text-sm text-muted-foreground">{col.description || 'No description'}</p>
       </div>
 
       <div className="flex gap-2 border-b">
@@ -73,12 +73,12 @@ export function CollectionDetail() {
       {tab === 'docs' && (
         dl ? <LoadingSpinner /> :
         de ? <ErrorBanner message={de} onRetry={rDocs} /> :
-        (!docs || docs.length === 0) ? <EmptyState title="暂无文档，前往摄入页面上传" /> :
+        (!docs || docs.length === 0) ? <EmptyState title="No documents yet. Go to Ingestion to upload." /> :
         <table className="w-full text-sm">
           <thead><tr className="border-b text-left text-muted-foreground">
-            <th className="p-2 font-medium">标题</th><th className="p-2 font-medium">来源</th>
-            <th className="p-2 font-medium">大小</th><th className="p-2 font-medium">状态</th>
-            <th className="p-2 font-medium">时间</th><th className="p-2 font-medium">操作</th>
+            <th className="p-2 font-medium">Title</th><th className="p-2 font-medium">Source</th>
+            <th className="p-2 font-medium">Size</th><th className="p-2 font-medium">Status</th>
+            <th className="p-2 font-medium">Time</th><th className="p-2 font-medium">Actions</th>
           </tr></thead>
           <tbody>{docs.map(d => (
             <tr key={d.id} className="border-b last:border-0">
@@ -99,7 +99,7 @@ export function CollectionDetail() {
             {col.config && Object.keys(col.config).length > 0 ? (
               <pre className="text-xs bg-muted p-4 rounded-md overflow-auto">{JSON.stringify(col.config, null, 2)}</pre>
             ) : (
-              <p className="text-sm text-muted-foreground py-8 text-center">未配置</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">Not configured</p>
             )}
           </CardContent>
         </Card>
@@ -108,8 +108,8 @@ export function CollectionDetail() {
       {tab === 'search' && (
         <div className="space-y-4">
           <div className="flex gap-2">
-            <Input value={sq} onChange={e => setSq(e.target.value)} placeholder="输入测试查询..." onKeyDown={e => e.key === 'Enter' && handleSearch()} />
-            <Button onClick={handleSearch} disabled={searching}><Search className="h-4 w-4 mr-1" />{searching ? '搜索中...' : '搜索'}</Button>
+            <Input value={sq} onChange={e => setSq(e.target.value)} placeholder="Enter test query..." onKeyDown={e => e.key === 'Enter' && handleSearch()} />
+            <Button onClick={handleSearch} disabled={searching}><Search className="h-4 w-4 mr-1" />{searching ? 'Searching...' : 'Search'}</Button>
           </div>
           {sr && (
             <Card>
@@ -119,18 +119,18 @@ export function CollectionDetail() {
                 ) : (
                   <>
                     <div>
-                      <h3 className="text-sm font-medium mb-1">回答</h3>
+                      <h3 className="text-sm font-medium mb-1">Answer</h3>
                       <p className="text-sm text-muted-foreground">{sr.answer}</p>
                     </div>
                     {sr.citations?.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-medium mb-1">引文 ({sr.citations.length})</h3>
+                        <h3 className="text-sm font-medium mb-1">Citations ({sr.citations.length})</h3>
                         <div className="space-y-2">
                           {sr.citations.map((c: any, i: number) => (
                             <div key={i} className="text-xs bg-muted p-2 rounded">
-                              <p className="font-medium">{c.document_title || c.title || `引文 ${i + 1}`}</p>
+                              <p className="font-medium">{c.document_title || c.title || `Citation ${i + 1}`}</p>
                               <p className="text-muted-foreground mt-1">{(c.text_snippet || c.text || '').slice(0, 200)}</p>
-                              <p className="text-muted-foreground mt-0.5">相关度: {typeof c.relevance === 'number' ? c.relevance.toFixed(3) : '-'}</p>
+                              <p className="text-muted-foreground mt-0.5">Relevance: {typeof c.relevance === 'number' ? c.relevance.toFixed(3) : '-'}</p>
                             </div>
                           ))}
                         </div>

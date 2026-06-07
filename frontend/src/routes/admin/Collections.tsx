@@ -18,10 +18,10 @@ export function Collections() {
   const [deleting, setDeleting] = useState<string | null>(null)
 
   async function handleDelete(id: string) {
-    if (!confirm('确定删除此知识库？')) return
+    if (!confirm('Delete this collection?')) return
     setDeleting(id)
     try { await deleteCollection(id); refetch() }
-    catch (e: any) { alert(e?.message || '删除失败') }
+    catch (e: any) { alert(e?.message || 'Delete failed') }
     finally { setDeleting(null) }
   }
 
@@ -31,23 +31,23 @@ export function Collections() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">知识库</h1>
-        <Button onClick={() => setShowCreate(true)}><Plus className="h-4 w-4 mr-1" /> 新建</Button>
+        <h1 className="text-xl font-bold">Collections</h1>
+        <Button onClick={() => setShowCreate(true)}><Plus className="h-4 w-4 mr-1" /> New</Button>
       </div>
       <CreateCollectionDialog open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); refetch() }} />
       {(!data || data.length === 0) ? (
-        <EmptyState title="暂无知识库，点击上方按钮创建" />
+        <EmptyState title="No collections yet. Click 'New' to create one." />
       ) : (
         <Card>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
-                  <th className="p-3 font-medium">名称</th>
-                  <th className="p-3 font-medium">文档数</th>
-                  <th className="p-3 font-medium">Chunk 数</th>
-                  <th className="p-3 font-medium">状态</th>
-                  <th className="p-3 font-medium">操作</th>
+                  <th className="p-3 font-medium">Name</th>
+                  <th className="p-3 font-medium">Docs</th>
+                  <th className="p-3 font-medium">Chunks</th>
+                  <th className="p-3 font-medium">Status</th>
+                  <th className="p-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>

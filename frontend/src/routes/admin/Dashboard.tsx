@@ -20,25 +20,25 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
-        <StatsCard icon={Database} label="知识库总数" value={cols?.length ?? 0} />
-        <StatsCard icon={FileText} label="文档总数" value={totalDocs} />
-        <StatsCard icon={ListTodo} label="最近任务" value={jobs?.length ?? 0} />
+        <StatsCard icon={Database} label="Collections" value={cols?.length ?? 0} />
+        <StatsCard icon={FileText} label="Documents" value={totalDocs} />
+        <StatsCard icon={ListTodo} label="Recent Jobs" value={jobs?.length ?? 0} />
       </div>
       <Card>
-        <CardHeader><CardTitle className="text-lg">最近任务</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg">Recent Jobs</CardTitle></CardHeader>
         <CardContent>
           {(!jobs || jobs.length === 0) ? (
-            <p className="text-sm text-muted-foreground text-center py-8">暂无任务</p>
+            <p className="text-sm text-muted-foreground text-center py-8">No jobs yet</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="pb-2 font-medium">Job ID</th>
-                  <th className="pb-2 font-medium">知识库</th>
-                  <th className="pb-2 font-medium">来源</th>
-                  <th className="pb-2 font-medium">进度</th>
-                  <th className="pb-2 font-medium">状态</th>
-                  <th className="pb-2 font-medium">创建时间</th>
+                  <th className="pb-2 font-medium">Collection</th>
+                  <th className="pb-2 font-medium">Source</th>
+                  <th className="pb-2 font-medium">Progress</th>
+                  <th className="pb-2 font-medium">Status</th>
+                  <th className="pb-2 font-medium">Created</th>
                 </tr>
               </thead>
               <tbody>

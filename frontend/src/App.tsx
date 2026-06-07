@@ -13,7 +13,7 @@ const IngestionJobs = lazy(() => import('@/routes/admin/IngestionJobs').then(m =
 const ChatLayout = lazy(() => import('@/routes/chat/ChatLayout').then(m => ({ default: m.ChatLayout })))
 
 function Loading() {
-  return <div className="flex items-center justify-center h-screen text-muted-foreground">{'加载中...'}</div>
+  return <div className="flex items-center justify-center h-screen text-muted-foreground">Loading...</div>
 }
 
 function LoginGuard() {

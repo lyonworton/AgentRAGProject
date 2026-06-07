@@ -36,7 +36,7 @@ export function MessageBubble({ role, content, isStreaming, citations, traceId, 
               key={i}
               className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-medium cursor-pointer hover:bg-primary/20 align-middle mx-0.5"
               onClick={() => onCitationClick?.(cite)}
-              title={cite.document_title || cite.title || `引文 ${idx + 1}`}
+              title={cite.document_title || cite.title || `Citation ${idx + 1}`}
             >
               {m[1]}
             </span>

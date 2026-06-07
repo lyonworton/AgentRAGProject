@@ -16,7 +16,7 @@ export function useCollections() {
       const data = await listCollections()
       setState({ data, loading: false, error: null })
     } catch (e: any) {
-      setState({ data: null, loading: false, error: e?.message || '加载失败' })
+      setState({ data: null, loading: false, error: e?.message || 'Load failed' })
     }
   }, [])
 

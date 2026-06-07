@@ -21,17 +21,17 @@ export function IngestionJobs() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">摄入任务</h1>
+        <h1 className="text-xl font-bold">Ingestion Jobs</h1>
         <div className="flex items-center gap-2">
           <select className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm" value={filterColId} onChange={e => setFilterColId(e.target.value)}>
-            <option value="">全部知识库</option>
+            <option value="">All Collections</option>
             {cols?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
       </div>
 
       {(!jobs || jobs.length === 0) ? (
-        <EmptyState title="暂无摄入任务" />
+        <EmptyState title="No ingestion jobs yet" />
       ) : (
         <Card>
           <CardContent className="p-0">
@@ -39,11 +39,11 @@ export function IngestionJobs() {
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="p-3 font-medium">Job ID</th>
-                  <th className="p-3 font-medium">知识库</th>
-                  <th className="p-3 font-medium">来源</th>
-                  <th className="p-3 font-medium">进度</th>
-                  <th className="p-3 font-medium">状态</th>
-                  <th className="p-3 font-medium">创建时间</th>
+                  <th className="p-3 font-medium">Collection</th>
+                  <th className="p-3 font-medium">Source</th>
+                  <th className="p-3 font-medium">Progress</th>
+                  <th className="p-3 font-medium">Status</th>
+                  <th className="p-3 font-medium">Created</th>
                 </tr>
               </thead>
               <tbody>

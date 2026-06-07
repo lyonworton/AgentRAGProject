@@ -12,14 +12,14 @@ export function SessionList({ onClose }: Props) {
   const navigate = useNavigate()
   const { sessionId } = useParams<{ sessionId: string }>()
 
-  if (loading) return <div className="p-4"><LoadingSpinner text="加载会话..." /></div>
+  if (loading) return <div className="p-4"><LoadingSpinner text="Loading sessions..." /></div>
   if (error) return <div className="p-4"><ErrorBanner message={error} onRetry={refetch} /></div>
 
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-2">
         {(!data || data.length === 0) ? (
-          <EmptyState title="暂无历史会话" />
+          <EmptyState title="No conversation history" />
         ) : (
           <div className="space-y-1">
             {data.map(s => (
@@ -33,10 +33,10 @@ export function SessionList({ onClose }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="truncate">{s.title || '新会话'}</span>
+                    <span className="truncate">{s.title || 'New session'}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 ml-6">
-                    {s.message_count} 条消息
+                    {s.message_count} messages
                   </p>
                 </div>
                 <button

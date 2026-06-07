@@ -10,7 +10,7 @@ from app.domain.user import User
 router=APIRouter(prefix="/auth",tags=["auth"])
 class RegisterRequest(BaseModel):username:str;email:str;password:str
 class LoginRequest(BaseModel):username:str;password:str
-class TokenResponse(BaseModel):access_token:str;token_type:str="bearer"
+class TokenResponse(BaseModel):access_token:str;token_type:str="bearer";user:dict
 class APIKeyResponse(BaseModel):api_key:str
 @router.post("/register",status_code=201)
 async def register(req:RegisterRequest,db:AsyncSession=Depends(get_db)):
@@ -25,7 +25,7 @@ async def login(req:LoginRequest,db:AsyncSession=Depends(get_db)):
  u=r.scalar_one_or_none()
  if not u or not verify_password(req.password,u.password_hash):raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid credentials")
  u.last_login_at=datetime.now(timezone.utc);await db.flush()
- return TokenResponse(access_token=create_access_token(u.id))
+ return TokenResponse(access_token=create_access_token(u.id),user={"id":u.id,"username":u.username})
 @router.post("/api-key",response_model=APIKeyResponse)
 async def create_api_key(user:User=Depends(get_current_user),db:AsyncSession=Depends(get_db)):
  raw,kh=generate_api_key();user.api_key_hash=kh;await db.flush()

@@ -30,46 +30,46 @@ export function Ingestion() {
   const [contentCols, setContentCols] = useState('')
 
   async function submit() {
-    if (!colId) { setMsg('请选择知识库'); return }
+    if (!colId) { setMsg('Please select a collection'); return }
     setSubmitting(true); setMsg('')
     try {
       if (tab === 'local') {
-        if (!files || files.length === 0) { setMsg('请选择文件'); setSubmitting(false); return }
+        if (!files || files.length === 0) { setMsg('Please select files'); setSubmitting(false); return }
         await ingestLocal(colId, Array.from(files))
       } else if (tab === 'web') {
         const urlList = urls.split('\n').map(s => s.trim()).filter(Boolean)
-        if (urlList.length === 0) { setMsg('请输入至少一个URL'); setSubmitting(false); return }
+        if (urlList.length === 0) { setMsg('Please enter at least one URL'); setSubmitting(false); return }
         await ingestWeb(colId, urlList)
       } else {
-        if (!dbUrl || !dbQuery || !titleCol || !contentCols) { setMsg('请填写所有字段'); setSubmitting(false); return }
+        if (!dbUrl || !dbQuery || !titleCol || !contentCols) { setMsg('Please fill in all fields'); setSubmitting(false); return }
         await ingestDatabase(colId, dbUrl, dbQuery, titleCol, contentCols.split(',').map(s => s.trim()))
       }
-      setMsg('提交成功！')
+      setMsg('Submitted successfully!')
       setTimeout(() => navigate('/admin/ingestion/jobs'), 500)
     } catch (e: any) {
-      setMsg(e?.message || '提交失败')
+      setMsg(e?.message || 'Submit failed')
     } finally { setSubmitting(false) }
   }
 
   if (loading) return <LoadingSpinner />
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'local', label: '本地文件' },
-    { key: 'web', label: '网页' },
-    { key: 'database', label: '数据库' },
+    { key: 'local', label: 'Local Files' },
+    { key: 'web', label: 'Web' },
+    { key: 'database', label: 'Database' },
   ]
 
   return (
     <div className="space-y-4 max-w-2xl">
-      <h1 className="text-xl font-bold">数据摄入</h1>
+      <h1 className="text-xl font-bold">Data Ingestion</h1>
 
       <div className="space-y-2">
-        <Label>选择知识库</Label>
+        <Label>Select Collection</Label>
         {(!cols || cols.length === 0) ? (
-          <p className="text-sm text-muted-foreground">暂无知识库，请先创建</p>
+          <p className="text-sm text-muted-foreground">No collections yet. Please create one first.</p>
         ) : (
           <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={colId} onChange={e => setColId(e.target.value)}>
-            <option value="">-- 选择知识库 --</option>
+            <option value="">-- Select a collection --</option>
             {cols.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
@@ -88,31 +88,31 @@ export function Ingestion() {
         <CardContent className="p-4 space-y-4">
           {tab === 'local' && (
             <div className="space-y-2">
-              <Label>选择文件</Label>
+              <Label>Select Files</Label>
               <Input type="file" multiple onChange={e => setFiles((e.target as HTMLInputElement).files)} />
             </div>
           )}
           {tab === 'web' && (
             <div className="space-y-2">
-              <Label>URL 列表（每行一个）</Label>
+              <Label>URL List (one per line)</Label>
               <textarea className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm" value={urls} onChange={e => setUrls(e.target.value)} placeholder="https://example.com/article1&#10;https://example.com/article2" />
             </div>
           )}
           {tab === 'database' && (
             <div className="space-y-3">
-              <div className="space-y-2"><Label>数据库 URL</Label><Input value={dbUrl} onChange={e => setDbUrl(e.target.value)} placeholder="postgresql://user:pass@host/db" /></div>
-              <div className="space-y-2"><Label>SQL 查询</Label><Input value={dbQuery} onChange={e => setDbQuery(e.target.value)} placeholder="SELECT * FROM articles" /></div>
-              <div className="space-y-2"><Label>标题列</Label><Input value={titleCol} onChange={e => setTitleCol(e.target.value)} placeholder="title" /></div>
-              <div className="space-y-2"><Label>内容列（逗号分隔）</Label><Input value={contentCols} onChange={e => setContentCols(e.target.value)} placeholder="body,summary" /></div>
+              <div className="space-y-2"><Label>Database URL</Label><Input value={dbUrl} onChange={e => setDbUrl(e.target.value)} placeholder="postgresql://user:pass@host/db" /></div>
+              <div className="space-y-2"><Label>SQL Query</Label><Input value={dbQuery} onChange={e => setDbQuery(e.target.value)} placeholder="SELECT * FROM articles" /></div>
+              <div className="space-y-2"><Label>Title Column</Label><Input value={titleCol} onChange={e => setTitleCol(e.target.value)} placeholder="title" /></div>
+              <div className="space-y-2"><Label>Content Columns (comma separated)</Label><Input value={contentCols} onChange={e => setContentCols(e.target.value)} placeholder="body,summary" /></div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {msg && <p className={`text-sm ${msg.includes('成功') ? 'text-green-600' : 'text-destructive'}`}>{msg}</p>}
+      {msg && <p className={`text-sm ${msg.includes('successfully') ? 'text-green-600' : 'text-destructive'}`}>{msg}</p>}
 
       <Button onClick={submit} disabled={submitting || !colId}>
-        {submitting ? '提交中...' : '提交摄入任务'}
+        {submitting ? 'Submitting...' : 'Submit Ingestion Job'}
       </Button>
     </div>
   )

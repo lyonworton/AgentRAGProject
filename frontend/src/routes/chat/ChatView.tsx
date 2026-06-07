@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useCallback } from 'react'
+import { useParams } from 'react-router-dom'
 import { Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,17 +7,7 @@ import { StatusBar } from '@/components/chat/StatusBar'
 import { MessageBubble } from '@/components/chat/MessageBubble'
 import { CitationPanel } from '@/components/chat/CitationPanel'
 import { FeedbackButtons } from '@/components/chat/FeedbackButtons'
-import { useSessionHistory } from '@/hooks/useSessionHistory'
-import { createSession } from '@/api/sessions'
-import { fetchSSE } from '@/lib/sse'
-
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-  streaming?: boolean
-  citations?: any[]
-  traceId?: string
-}
+import { useChatStream } from '@/hooks/useChatStream'
 
 interface Citation {
   document_title?: string
@@ -34,125 +24,26 @@ interface Props {
 
 export function ChatView({ selectedCollectionId }: Props) {
   const { sessionId } = useParams<{ sessionId: string }>()
-  const navigate = useNavigate()
-  const { data: history } = useSessionHistory(sessionId)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const {
+    messages,
+    isStreaming,
+    statusBar,
+    citations,
+    error,
+    timedOut,
+    send,
+    retry,
+    bottomRef,
+  } = useChatStream(selectedCollectionId, sessionId)
+
   const [input, setInput] = useState('')
-  const [statusBar, setStatusBar] = useState<string | null>(null)
-  const [isStreaming, setIsStreaming] = useState(false)
-  const [citations, setCitations] = useState<Citation[]>([])
   const [activeCitation, setActiveCitation] = useState<Citation | null>(null)
   const [showCitations, setShowCitations] = useState(false)
-  const [currentTraceId, setCurrentTraceId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [timedOut, setTimedOut] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (history) {
-      const msgs: ChatMessage[] = history.map((m: any) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-        citations: m.citations || undefined,
-        traceId: m.trace_id || undefined,
-      }))
-      setMessages(msgs)
-    } else if (!sessionId) {
-      setMessages([])
-      setShowCitations(false)
-      setCitations([])
-    }
-  }, [history, sessionId])
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  async function doSend(q: string) {
-    if (!q.trim() || isStreaming) return
-    setError(null)
-    setTimedOut(false)
-
-    let sid = sessionId
-    if (!sid) {
-      try {
-        const s = await createSession(selectedCollectionId, q.slice(0, 50))
-        sid = s.id
-        navigate('/chat/' + sid, { replace: true })
-      } catch (e: any) {
-        setError(e?.message || '会话创建失败')
-        return
-      }
-    }
-
-    const userMsg: ChatMessage = { role: 'user', content: q }
-    const aiMsg: ChatMessage = { role: 'assistant', content: '', streaming: true }
-    setMessages(prev => [...prev, userMsg, aiMsg])
-    setIsStreaming(true)
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => {
-      controller.abort()
-      setTimedOut(true)
-      setIsStreaming(false)
-      setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { ...m, streaming: false } : m))
-    }, 60000)
-
-    try {
-      await fetchSSE(
-        '/api/v1/query/stream',
-        { query: q, collection_ids: [selectedCollectionId], session_id: sid },
-        (data: any) => setStatusBar(data.message),
-        (data: any) => {
-          setMessages(prev => prev.map((m, i) => {
-            if (i === prev.length - 1 && m.role === 'assistant') {
-              return { ...m, content: m.content + data.text }
-            }
-            return m
-          }))
-        },
-        (data: any) => {
-          setMessages(prev => prev.map((m, i) => {
-            if (i === prev.length - 1 && m.role === 'assistant') {
-              return { ...m, streaming: false, citations: data.citations, traceId: data.trace_id }
-            }
-            return m
-          }))
-          setCitations(data.citations || [])
-          setCurrentTraceId(data.trace_id)
-          setStatusBar(null)
-          setIsStreaming(false)
-          if (data.citations && data.citations.length > 0) setShowCitations(true)
-        },
-        controller.signal,
-      )
-    } catch (e: any) {
-      if (e.name !== 'AbortError') {
-        setError(e?.message || '请求失败')
-        setIsStreaming(false)
-        setMessages(prev => prev.map((m, i) => i === prev.length - 1 ? { ...m, streaming: false } : m))
-      }
-    } finally {
-      clearTimeout(timeoutId)
-    }
-  }
 
   function handleSend() {
-    doSend(input)
+    send(input)
     setInput('')
   }
-
-  const handleRetry = useCallback(() => {
-    const lastUser = [...messages].reverse().find(m => m.role === 'user')
-    if (lastUser) {
-      setMessages(prev => {
-        const lastIdx = prev.length - 1
-        if (lastIdx >= 0 && prev[lastIdx].role === 'assistant') return prev.slice(0, -1)
-        return prev
-      })
-      doSend(lastUser.content)
-    }
-  }, [messages])
 
   return (
     <div className="flex-1 flex">
@@ -160,7 +51,7 @@ export function ChatView({ selectedCollectionId }: Props) {
         <div className="flex-1 overflow-auto p-4 space-y-4">
           {!sessionId && messages.length === 0 && (
             <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-              输入问题开始对话
+              Start a conversation by typing a question
             </div>
           )}
           {messages.map((m, i) => (
@@ -184,7 +75,7 @@ export function ChatView({ selectedCollectionId }: Props) {
             <div className="text-center">
               <p className="text-sm text-destructive mb-1">{error}</p>
               {timedOut && (
-                <Button variant="outline" size="sm" onClick={handleRetry}>重试</Button>
+                <Button variant="outline" size="sm" onClick={retry}>Retry</Button>
               )}
             </div>
           )}
@@ -201,7 +92,7 @@ export function ChatView({ selectedCollectionId }: Props) {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
-              placeholder="输入问题..."
+              placeholder="Ask a question..."
               disabled={isStreaming}
             />
             <Button onClick={handleSend} disabled={isStreaming || !input.trim()}>

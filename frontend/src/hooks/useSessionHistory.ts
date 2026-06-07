@@ -11,7 +11,7 @@ export function useSessionHistory(sessionId: string | undefined) {
     setLoading(true)
     getSessionHistory(sessionId)
       .then((d: { messages: Message[] }) => { setData(d.messages); setError(null) })
-      .catch((e: Error) => { setError(e?.message || '加载失败') })
+      .catch((e: Error) => { setError(e?.message || 'Load failed') })
       .finally(() => setLoading(false))
   }, [sessionId])
 
