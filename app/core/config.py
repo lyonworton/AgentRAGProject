@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-small"
+    llm_provider: str = "openai"  # "openai" | "ollama"
+    ollama_model: str = "qwen2.5"
+    ollama_base_url: str = "http://localhost:11434"
     secret_key: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440

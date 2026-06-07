@@ -1,6 +1,6 @@
 import json
 from app.agents.state import AgentState
-from app.adapters.llm.openai import OpenAILLM
+from app.core.llm_factory import get_llm
 
 UNDERSTAND_PROMPT = """Analyze the user's query and conversation history. You are a query understanding specialist.
 
@@ -23,7 +23,7 @@ Output ONLY valid JSON, no explanation:
 
 
 async def understand_node(state: AgentState) -> AgentState:
-    llm = OpenAILLM()
+    llm = get_llm()
     prompt = f"{UNDERSTAND_PROMPT}\n\nQuery: {state['query']}\nHistory: {json.dumps(state.get('conversation_history', []))}"
     result = await llm.agenerate_structured(prompt, "You are a query analysis expert.", {
         "type": "object", "properties": {

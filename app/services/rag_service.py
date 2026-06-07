@@ -15,7 +15,8 @@ class RAGService:
             if not col or col.owner_id != user_id:
                 raise PermissionError(f"Collection {col_id} not found or access denied")
 
-        return await self.agent.run(query, collection_ids, session_id, options)
+        return await self.agent.run(query, collection_ids, db=db, user_id=user_id,
+                            session_id=session_id, options=options)
 
 
 _rag_service: RAGService | None = None

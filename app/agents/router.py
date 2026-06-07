@@ -1,7 +1,7 @@
 import json
 import structlog
 from app.agents.state import AgentState
-from app.adapters.llm.openai import OpenAILLM
+from app.core.llm_factory import get_llm
 from app.tools import get_tool_registry
 
 logger = structlog.get_logger()
@@ -31,6 +31,7 @@ FALLBACK_RULES: dict[str, list[str]] = {
     "exact": ["keyword_search"],
     "comparison": ["semantic_search", "kg_search"],
     "reasoning": ["semantic_search", "kg_search", "keyword_search"],
+    "web": ["web_search"],
 }
 
 ROUTE_SCHEMA = {
@@ -62,7 +63,7 @@ async def route_node(state: AgentState) -> AgentState:
     )
 
     try:
-        llm = OpenAILLM()
+        llm = get_llm()
         result = await llm.agenerate_structured(
             prompt,
             "You are a retrieval routing specialist.",

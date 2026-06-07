@@ -20,7 +20,7 @@ def _make_state(sub_tasks=None):
 
 @pytest.mark.asyncio
 async def test_router_llm_routing():
-    with patch("app.agents.router.OpenAILLM") as mock_llm, \
+    with patch("app.agents.router.get_llm") as mock_llm, \
          patch("app.agents.router.get_tool_registry") as mock_registry:
 
         mock_registry_instance = MagicMock()
@@ -46,7 +46,7 @@ async def test_router_llm_routing():
 
 @pytest.mark.asyncio
 async def test_router_llm_failure_falls_back_to_rules():
-    with patch("app.agents.router.OpenAILLM") as mock_llm, \
+    with patch("app.agents.router.get_llm") as mock_llm, \
          patch("app.agents.router.get_tool_registry") as mock_registry:
 
         mock_registry_instance = MagicMock()
@@ -67,7 +67,7 @@ async def test_router_llm_failure_falls_back_to_rules():
 
 @pytest.mark.asyncio
 async def test_router_filters_invalid_tool_names():
-    with patch("app.agents.router.OpenAILLM") as mock_llm, \
+    with patch("app.agents.router.get_llm") as mock_llm, \
          patch("app.agents.router.get_tool_registry") as mock_registry:
 
         mock_registry_instance = MagicMock()

@@ -1,6 +1,6 @@
 import json
 from app.agents.state import AgentState, RetrievedChunk
-from app.adapters.llm.openai import OpenAILLM
+from app.core.llm_factory import get_llm
 
 DRAFT_PROMPT = """Based on the retrieved chunks, draft a preliminary answer to the query.
 Use ONLY the retrieved content. Do not fabricate. Cite chunk IDs inline like [c:chunk_id].
@@ -32,7 +32,7 @@ Output ONLY JSON:
 
 
 async def reflector_node(state: AgentState) -> AgentState:
-    llm = OpenAILLM()
+    llm = get_llm()
     chunks_text = "\n".join(
         f"[{r.get('chunk_id', '?')}] {r.get('text', '')[:500]}" for r in state.get("retrieved", [])
     )

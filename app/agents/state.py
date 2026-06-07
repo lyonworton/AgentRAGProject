@@ -55,3 +55,5 @@ class AgentState(TypedDict, total=False):
     max_iterations: int
     prev_score: float | None
     collection_ids: List[str]
+    session_id: str
+    enable_web_search: bool

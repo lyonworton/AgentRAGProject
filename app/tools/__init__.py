@@ -39,6 +39,8 @@ def get_tool_registry() -> ToolRegistry:
         _registry.register(SemanticSearchTool())
         _registry.register(KGSearchTool())
         _registry.register(KeywordSearchTool())
+        from app.tools.web_search import WebSearchTool
+        _registry.register(WebSearchTool())
     return _registry
 
 

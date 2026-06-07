@@ -1,7 +1,7 @@
 import json
 import time
 from app.agents.state import AgentState
-from app.adapters.llm.openai import OpenAILLM
+from app.core.llm_factory import get_llm
 
 SYNTHESIZE_PROMPT = """Synthesize a final answer from the retrieved chunks. Follow these rules STRICTLY:
 
@@ -21,7 +21,7 @@ Retrieved chunks:
 
 
 async def synthesize_node(state: AgentState) -> AgentState:
-    llm = OpenAILLM()
+    llm = get_llm()
     chunks_text = "\n\n".join(
         f"CHUNK [{r.get('chunk_id', '?')}] (from {r.get('document_id', '?')}, score={r.get('score', 0):.3f}):\n{r.get('text', '')}"
         for r in state.get("retrieved", [])

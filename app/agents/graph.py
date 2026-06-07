@@ -7,8 +7,35 @@ from app.agents.reflector import reflector_node
 from app.agents.verifier import verifier_node
 from app.agents.nodes import synthesize_node
 
-# Placeholder memory node for Phase 1
 async def memory_node(state: AgentState) -> AgentState:
+    """Persist conversation context to Redis short-term memory."""
+    if not state.get('final_answer'):
+        return state
+    try:
+        from app.core.di import get_redis
+        from app.memory.conversation import ConversationMemory
+        redis = await get_redis()
+        memory = ConversationMemory(redis)
+        session_id = state.get('session_id', 'default')
+        query = state.get('query', '')
+        answer = state.get('final_answer', '')
+        intent = state.get('intent', '')
+        if intent:
+            await memory.save_topic(session_id, intent)
+        citations = state.get('citations', [])
+        if citations:
+            facts = [f"[{c.get('chunk_id','?')}] {c.get('text','')[:200]}" for c in citations[:5]]
+            await memory.save_facts(session_id, facts)
+        window_entry = [{'role': 'user', 'content': query}, {'role': 'assistant', 'content': answer[:1000]}]
+        existing = await memory.aload(f'session:{session_id}:window')
+        existing_msgs = (existing or {}).get('messages', [])
+        existing_msgs.extend(window_entry)
+        await memory.save_window(session_id, existing_msgs)
+        summary = answer[:500] if len(answer) > 500 else answer
+        await memory.save_summary(session_id, summary)
+    except Exception:
+        import structlog
+        structlog.get_logger().warning('memory_node_persist_failed', exc_info=True)
     return state
 
 

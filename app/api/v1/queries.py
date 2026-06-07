@@ -62,5 +62,31 @@ async def query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db), us
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 @router.get("/{trace_id}/trace")
-async def get_trace(trace_id: str):
-    return {"trace_id": trace_id, "note": "Trace persistence available in Phase 2"}
+async def get_trace(trace_id: str, db=Depends(get_db),
+                    user: User = Depends(get_current_user)):
+    from sqlalchemy import select
+    from app.domain.query_trace import QueryTrace
+    result = await db.execute(
+        select(QueryTrace).where(
+            QueryTrace.id == trace_id,
+            QueryTrace.user_id == user.id,
+        )
+    )
+    trace = result.scalar_one_or_none()
+    if not trace:
+        raise HTTPException(status_code=404, detail="Trace not found")
+    return {
+        "trace_id": trace.id,
+        "session_id": trace.session_id,
+        "query": trace.query,
+        "answer": trace.answer,
+        "model_used": trace.model_used,
+        "total_tokens": trace.total_tokens,
+        "estimated_cost": trace.estimated_cost,
+        "citations": trace.citations,
+        "agent_graph": trace.agent_graph,
+        "quality_score": trace.quality_score,
+        "iterations": trace.iterations,
+        "latency_ms": trace.latency_ms,
+        "created_at": trace.created_at.isoformat() if trace.created_at else None,
+    }

@@ -1,7 +1,7 @@
 from app.tools.base import BaseTool
 from app.adapters.embedding.openai_embed import OpenAIEmbedding
 from app.adapters.vector_store.milvus import MilvusStore
-from app.adapters.llm.openai import OpenAILLM
+from app.core.llm_factory import get_llm
 
 QUERY_EXPAND_PROMPT = """Generate {n} alternative search queries for the given task description.
 The variants should use different wording, synonyms, and perspectives to maximize recall.
@@ -15,7 +15,7 @@ class SemanticSearchTool(BaseTool):
 
     async def _expand_queries(self, query: str, n: int = 3) -> list[str]:
         try:
-            llm = OpenAILLM()
+            llm = get_llm()
             result = await llm.agenerate_structured(
                 QUERY_EXPAND_PROMPT.format(n=n) + f"\nTask: {query}",
                 output_schema={"type": "array", "items": {"type": "string"}},

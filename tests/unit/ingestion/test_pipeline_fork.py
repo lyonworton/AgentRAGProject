@@ -25,7 +25,7 @@ async def test_run_semantic_path(mock_write, mock_embed, mock_chunk):
 
 
 @pytest.mark.asyncio
-@patch("app.adapters.llm.openai.OpenAILLM")
+@patch("app.adapters.llm.openai.OpenAILLM", return_value=MagicMock())
 @patch("app.ingestion.graph_path.neo4j_writer.write_graph_to_neo4j")
 @patch("app.core.di.get_kg_store")
 @patch("app.ingestion.graph_path.relation_extractor.extract_relations")

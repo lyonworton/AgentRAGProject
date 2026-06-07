@@ -1,6 +1,6 @@
 import json
 from app.agents.state import AgentState, VerifiedClaim
-from app.adapters.llm.openai import OpenAILLM
+from app.core.llm_factory import get_llm
 
 VERIFY_PROMPT = """Verify whether each claim in the draft answer is supported by the retrieved chunks.
 
@@ -25,7 +25,7 @@ Output ONLY JSON:
 
 
 async def verifier_node(state: AgentState) -> AgentState:
-    llm = OpenAILLM()
+    llm = get_llm()
     draft = state.get("draft_answer", "")
     chunks_text = "\n".join(
         f"[{r.get('chunk_id', '?')}] {r.get('text', '')[:300]}" for r in state.get("retrieved", [])

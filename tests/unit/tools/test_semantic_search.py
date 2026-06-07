@@ -11,7 +11,7 @@ async def test_semantic_search_returns_unified_format():
 
     with patch("app.tools.semantic_search.OpenAIEmbedding") as mock_emb, \
          patch("app.tools.semantic_search.MilvusStore") as mock_store, \
-         patch("app.tools.semantic_search.OpenAILLM") as mock_llm:
+         patch("app.tools.semantic_search.get_llm") as mock_llm:
 
         mock_llm_instance = MagicMock()
         mock_llm_instance.agenerate_structured = AsyncMock(
@@ -45,7 +45,7 @@ async def test_semantic_search_deduplicates_by_chunk_id():
     tool = SemanticSearchTool()
     with patch("app.tools.semantic_search.OpenAIEmbedding") as mock_emb, \
          patch("app.tools.semantic_search.MilvusStore") as mock_store, \
-         patch("app.tools.semantic_search.OpenAILLM") as mock_llm:
+         patch("app.tools.semantic_search.get_llm") as mock_llm:
 
         mock_llm_instance = MagicMock()
         mock_llm_instance.agenerate_structured = AsyncMock(return_value=["v1"])
@@ -79,7 +79,7 @@ async def test_semantic_search_expand_queries_failure_uses_original():
     tool = SemanticSearchTool()
     with patch("app.tools.semantic_search.OpenAIEmbedding") as mock_emb, \
          patch("app.tools.semantic_search.MilvusStore") as mock_store, \
-         patch("app.tools.semantic_search.OpenAILLM") as mock_llm:
+         patch("app.tools.semantic_search.get_llm") as mock_llm:
 
         mock_llm_instance = MagicMock()
         mock_llm_instance.agenerate_structured = AsyncMock(side_effect=Exception("LLM down"))
