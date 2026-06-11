@@ -10,6 +10,7 @@ interface ChatMessage {
   streaming?: boolean
   citations?: any[]
   traceId?: string
+  latencyMs?: number
 }
 
 interface Citation {
@@ -19,6 +20,13 @@ interface Citation {
   text?: string
   relevance?: number
   chunk_id?: string
+}
+
+interface ThoughtItem {
+  phase: string
+  text: string
+  score?: number
+  claims?: Array<{text: string; status: string}>
 }
 
 export function useChatStream(
@@ -31,16 +39,20 @@ export function useChatStream(
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [statusBar, setStatusBar] = useState<string | null>(null)
+  const [thoughts, setThoughts] = useState<ThoughtItem[]>([])
   const [citations, setCitations] = useState<Citation[]>([])
   const [currentTraceId, setCurrentTraceId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [timedOut, setTimedOut] = useState(false)
+  const [latencyMs, setLatencyMs] = useState<number | null>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const streamingRef = useRef(false)  // guard against history wipe during streaming
 
-  // Load history when session changes
+  // Load history when session changes (skip while streaming to avoid race)
   useEffect(() => {
+    if (streamingRef.current) return  // don't override streaming messages
     if (history) {
       const msgs: ChatMessage[] = history.map((m: any) => ({
         role: m.role as 'user' | 'assistant',
@@ -50,21 +62,26 @@ export function useChatStream(
       }))
       setMessages(msgs)
       setCitations([])
+      setThoughts([])
     } else if (!sessionId) {
       setMessages([])
       setCitations([])
+      setThoughts([])
     }
   }, [history, sessionId])
 
   // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, thoughts])
 
   const send = useCallback(async (query: string) => {
     if (!query.trim() || isStreaming) return
     setError(null)
     setTimedOut(false)
+    setThoughts([])
+    setLatencyMs(null)
+    streamingRef.current = true
 
     let sid = sessionId
     if (!sid) {
@@ -86,45 +103,75 @@ export function useChatStream(
     const controller = new AbortController()
     abortRef.current = controller
 
+    // 45s client-side timeout
     const timeoutId = setTimeout(() => {
       controller.abort()
       setTimedOut(true)
       setIsStreaming(false)
+      streamingRef.current = false
+      setStatusBar(null)
       setMessages(prev =>
         prev.map((m, i) =>
-          i === prev.length - 1 ? { ...m, streaming: false } : m,
+          i === prev.length - 1 ? { ...m, streaming: false, content: m.content || '(request timed out)' } : m,
         ),
       )
-    }, 90000)
+    }, 50000)
 
     try {
       await fetchSSE(
         '/api/v1/query/stream',
-        { query, collection_ids: [selectedCollectionId], session_id: sid },
-        (data: any) => setStatusBar(data.message),
-        (data: any) => {
-          setMessages(prev =>
-            prev.map((m, i) => {
-              if (i === prev.length - 1 && m.role === 'assistant') {
-                return { ...m, content: m.content + data.text }
-              }
-              return m
-            }),
-          )
-        },
-        (data: any) => {
-          setMessages(prev =>
-            prev.map((m, i) => {
-              if (i === prev.length - 1 && m.role === 'assistant') {
-                return { ...m, streaming: false, citations: data.citations, traceId: data.trace_id }
-              }
-              return m
-            }),
-          )
-          setCitations(data.citations || [])
-          setCurrentTraceId(data.trace_id)
-          setStatusBar(null)
-          setIsStreaming(false)
+        { query, collection_ids: [selectedCollectionId], session_id: sid, options: { timeout: 45 } },
+        {
+          onStatus: (data: any) => setStatusBar(data.message),
+          onThought: (data: any) => {
+            setThoughts(prev => [...prev, data])
+          },
+          onChunk: (data: any) => {
+            setMessages(prev =>
+              prev.map((m, i) => {
+                if (i === prev.length - 1 && m.role === 'assistant') {
+                  return { ...m, content: m.content + data.text }
+                }
+                return m
+              }),
+            )
+          },
+          onDone: (data: any) => {
+            setMessages(prev =>
+              prev.map((m, i) => {
+                if (i === prev.length - 1 && m.role === 'assistant') {
+                  return {
+                    ...m,
+                    streaming: false,
+                    citations: data.citations,
+                    traceId: data.trace_id,
+                    latencyMs: data.latency_ms,
+                  }
+                }
+                return m
+              }),
+            )
+            setCitations(data.citations || [])
+            setCurrentTraceId(data.trace_id)
+            setLatencyMs(data.latency_ms || null)
+            setStatusBar(null)
+            setIsStreaming(false)
+            streamingRef.current = false
+          },
+          onTimeout: (data: any) => {
+            setMessages(prev =>
+              prev.map((m, i) => {
+                if (i === prev.length - 1 && m.role === 'assistant') {
+                  return { ...m, streaming: false }
+                }
+                return m
+              }),
+            )
+            setTimedOut(true)
+            setStatusBar(null)
+            setIsStreaming(false)
+            streamingRef.current = false
+          },
         },
         controller.signal,
       )
@@ -132,6 +179,7 @@ export function useChatStream(
       if (e.name !== 'AbortError') {
         setError(e?.message || 'Request failed')
         setIsStreaming(false)
+        streamingRef.current = false
         setMessages(prev =>
           prev.map((m, i) =>
             i === prev.length - 1 ? { ...m, streaming: false } : m,
@@ -143,6 +191,18 @@ export function useChatStream(
       abortRef.current = null
     }
   }, [isStreaming, selectedCollectionId, sessionId, navigate])
+
+  const abort = useCallback(() => {
+    abortRef.current?.abort()
+    setIsStreaming(false)
+    streamingRef.current = false
+    setStatusBar(null)
+    setMessages(prev =>
+      prev.map((m, i) =>
+        i === prev.length - 1 && m.role === 'assistant' ? { ...m, streaming: false } : m,
+      ),
+    )
+  }, [])
 
   const retry = useCallback(() => {
     const lastUser = [...messages].reverse().find(m => m.role === 'user')
@@ -160,11 +220,14 @@ export function useChatStream(
     messages,
     isStreaming,
     statusBar,
+    thoughts,
     citations,
     currentTraceId,
     error,
     timedOut,
+    latencyMs,
     send,
+    abort,
     retry,
     bottomRef,
   }

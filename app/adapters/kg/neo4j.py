@@ -35,6 +35,9 @@ class Neo4jKGStore(BaseKGStore):
         await self._driver.verify_connectivity()
         logger.info("neo4j connected", uri=self._uri)
 
+    async def ahealth_check(self) -> None:
+        await self._driver.execute_query("RETURN 1")
+
     async def adisconnect(self) -> None:
         await self._driver.close()
         logger.info("neo4j disconnected")
@@ -89,11 +92,11 @@ class Neo4jKGStore(BaseKGStore):
             result = await session.run(
                 """
                 MATCH (e:Entity)
-                WHERE e.name CONTAINS $query
+                WHERE e.name CONTAINS $search_query
                 RETURN e.id AS id, e.name AS name, e.type AS type
                 LIMIT $top_k
                 """,
-                query=query,
+                search_query=query,
                 top_k=top_k,
             )
             records = await result.data()

@@ -10,6 +10,7 @@ from app.domain.document import Document
 from app.domain.ingest_job import IngestJob
 from app.adapters.document_loader.pdf import PDFLoader
 from app.adapters.document_loader.markdown import MarkdownLoader
+from app.core.config import get_settings
 
 LOADERS = {".pdf": PDFLoader, ".md": MarkdownLoader, ".txt": MarkdownLoader}
 
@@ -87,13 +88,15 @@ async def run_ingest_pipeline(
     collection_id: str,
     user_id: str,
     source: BaseSource,
-    embedding_dim: int = 1536,
+    embedding_dim: int = -1,
     db_session_factory=None,
 ):
     """统一摄入管道：Source → Parse → PG写入 → 三路并行 Fork → 状态汇总。"""
     files = await source.list_files()
     store = MilvusStore()
     col_name = f"col_{collection_id}"
+    if embedding_dim <= 0:
+        embedding_dim = get_settings().embedding_dim
     await store.create_collection(col_name, embedding_dim)
     total = len(files)
     completed, failed = 0, 0
@@ -160,7 +163,7 @@ async def run_ingest_pipeline(
                     d.path_status = path_status
                     if final_status != "error":
                         d.chunk_count = results[0] if isinstance(results[0], int) else 0
-                        d.embedding_model = "text-embedding-3-small"
+                        d.embedding_model = get_settings().bge_embedding_model
                         d.ingested_at = datetime.now(timezone.utc)
                     else:
                         d.error_message = str(results[0])

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
+from datetime import datetime
+from pydantic import BaseModel, field_validator
 from app.core.di import get_db
 from app.api.deps import get_current_user
 from app.domain.user import User
@@ -23,6 +24,13 @@ class SessionResponse(BaseModel):
     is_active: bool
     last_activity_at: str | None
 
+    @field_validator("last_activity_at", mode="before")
+    @classmethod
+    def _dt_to_str(cls, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
+
     model_config = {"from_attributes": True}
 
 
@@ -32,9 +40,16 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     trace_id: str | None
-    citations: dict | None
+    citations: list[dict] | dict | None
     token_count: int | None
     created_at: str | None
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def _dt_to_str(cls, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
 
     model_config = {"from_attributes": True}
 

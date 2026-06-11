@@ -40,10 +40,18 @@ async def _execute_task(
     task["status"] = "running"
     warnings: list[str] = []
 
-    results = await asyncio.gather(*[
-        registry.get(name).arun(task["description"], collection_ids)
-        for name in tool_names
-    ], return_exceptions=True)
+    async def _run_tool(name: str):
+        try:
+            return await asyncio.wait_for(
+                registry.get(name).arun(task["description"], collection_ids),
+                timeout=5.0,
+            )
+        except asyncio.TimeoutError:
+            return TimeoutError(f"Tool {name} timed out after 5s")
+        except Exception as e:
+            return e
+
+    results = await asyncio.gather(*[_run_tool(name) for name in tool_names])
 
     hits: list[dict] = []
     for name, result in zip(tool_names, results):
@@ -94,15 +102,43 @@ async def executor_node(state: AgentState) -> AgentState:
             all_hits.extend(hits)
             warnings.extend(warns)
 
+    # Phase 5: Rerank with pluggable reranker (default RRF, zero-cost)
+    if all_hits:
+        from app.adapters.reranker.factory import get_reranker
+        reranker = get_reranker()
+        all_hits = await reranker.rerank(state["query"], all_hits, top_k=10)
+    else:
+        all_hits = []
+
+    # Phase 6: Compute routing quality metrics
+    tool_selection_counts: dict[str, int] = {}
+    for tid, tools in routes.items():
+        for t in tools:
+            tool_selection_counts[t] = tool_selection_counts.get(t, 0) + 1
+
+    tool_hit_counts: dict[str, int] = {}
+    for h in all_hits:
+        tool = h["_tool"]
+        tool_hit_counts[tool] = tool_hit_counts.get(tool, 0) + 1
+
+    sources_after = list({h["source"] for h in all_hits})
+
+    state["routing_metrics"] = {
+        "tools_selected": tool_selection_counts,
+        "results_per_tool": tool_hit_counts,
+        "sources_in_final": sources_after,
+        "source_diversity": len(sources_after) / max(len(tool_selection_counts), 1),
+    }
+
     retrieved: list[RetrievedChunk] = []
     seen: set[str] = set()
-    for hit in sorted(all_hits, key=lambda h: h["score"], reverse=True):
+    for hit in all_hits:
         if hit["chunk_id"] not in seen:
             retrieved.append(RetrievedChunk(
                 chunk_id=hit["chunk_id"],
                 document_id=hit.get("document_id", ""),
                 text=hit["text"],
-                score=hit["score"],
+                score=hit.get("_rerank_score", hit["score"]),
                 source=hit["source"],
                 metadata={},
             ))

@@ -5,6 +5,8 @@ logger = structlog.get_logger()
 
 
 async def on_startup():
+    import asyncio
+
     settings = get_settings()
     logger.info("app starting", env=settings.app_env)
 
@@ -22,6 +24,15 @@ async def on_startup():
         logger.info("elasticsearch connected")
     except Exception as e:
         logger.warning("elasticsearch unavailable, keyword search disabled", error=str(e))
+
+    # Prewarm embedding model in a thread pool (doesn't block event loop)
+    try:
+        from app.core.embedding_factory import get_embedder
+        embedder = get_embedder()
+        await asyncio.to_thread(embedder._load_model)
+        logger.info("embedding model prewarmed")
+    except Exception as e:
+        logger.warning("embedding model unavailable, vector search disabled", error=str(e))
 
 
 async def on_shutdown():

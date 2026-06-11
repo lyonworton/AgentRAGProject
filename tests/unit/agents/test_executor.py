@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.agents.state import AgentState
 from app.agents.executor import _resolve_groups
+from app.adapters.reranker.rrf import RRFReranker
 
 
 class TestResolveGroups:
@@ -67,13 +68,15 @@ def _make_state(sub_tasks=None, routes=None, collection_ids=None):
         "draft_answer": "", "verified_claims": [], "supplement_queries": [], "need_supplement": False,
         "final_answer": "", "citations": [], "uncertainty_flags": [], "warnings": [], "bare_minimum_mode": False,
         "iteration": 0, "max_iterations": 5, "prev_score": None, "collection_ids": collection_ids or ["col1"],
+        "routing_metrics": None,
     }
     return state
 
 
 @pytest.mark.asyncio
 async def test_executor_single_tool_success():
-    with patch("app.agents.executor.get_tool_registry") as mock_registry:
+    with patch("app.agents.executor.get_tool_registry") as mock_registry, \
+         patch("app.adapters.reranker.factory.get_reranker", return_value=RRFReranker(k=60)):
         mock_tool = MagicMock()
         mock_tool.arun = AsyncMock(return_value=[
             {"chunk_id": "c1", "document_id": "d1", "text": "hello", "score": 0.9, "source": "milvus"},
@@ -96,7 +99,8 @@ async def test_executor_single_tool_success():
 
 @pytest.mark.asyncio
 async def test_executor_tool_failure_isolated():
-    with patch("app.agents.executor.get_tool_registry") as mock_registry:
+    with patch("app.agents.executor.get_tool_registry") as mock_registry, \
+         patch("app.adapters.reranker.factory.get_reranker", return_value=RRFReranker(k=60)):
         mock_tool_success = MagicMock()
         mock_tool_success.arun = AsyncMock(return_value=[
             {"chunk_id": "c1", "document_id": "d1", "text": "ok", "score": 0.9, "source": "milvus"},
@@ -123,7 +127,8 @@ async def test_executor_tool_failure_isolated():
 
 @pytest.mark.asyncio
 async def test_executor_deduplicates_by_chunk_id():
-    with patch("app.agents.executor.get_tool_registry") as mock_registry:
+    with patch("app.agents.executor.get_tool_registry") as mock_registry, \
+         patch("app.adapters.reranker.factory.get_reranker", return_value=RRFReranker(k=60)):
         mock_tool = MagicMock()
         mock_tool.arun = AsyncMock(return_value=[
             {"chunk_id": "c1", "document_id": "d1", "text": "hello", "score": 0.9, "source": "milvus"},
@@ -139,7 +144,7 @@ async def test_executor_deduplicates_by_chunk_id():
         )
         result = await executor_node(state)
         assert len(result["retrieved"]) == 1
-        assert result["retrieved"][0]["score"] == 0.9
+        assert result["retrieved"][0]["score"] > 0  # Phase 5: _rerank_score from RRF
 
 
 @pytest.mark.asyncio
@@ -152,7 +157,8 @@ async def test_executor_empty_subtasks_returns_empty():
 
 @pytest.mark.asyncio
 async def test_executor_subtask_status_updated():
-    with patch("app.agents.executor.get_tool_registry") as mock_registry:
+    with patch("app.agents.executor.get_tool_registry") as mock_registry, \
+         patch("app.adapters.reranker.factory.get_reranker", return_value=RRFReranker(k=60)):
         mock_tool = MagicMock()
         mock_tool.arun = AsyncMock(return_value=[
             {"chunk_id": "c1", "document_id": "d1", "text": "ok", "score": 0.9, "source": "milvus"},
@@ -185,3 +191,40 @@ async def test_executor_subtask_all_tools_fail():
         result = await executor_node(state)
         assert result["sub_tasks"][0]["status"] == "failed"
         assert result["retrieved"] == []
+
+
+@pytest.mark.asyncio
+async def test_executor_computes_routing_metrics():
+    """executor_node populates routing_metrics with tool counts and source diversity."""
+    with patch("app.agents.executor.get_tool_registry") as mock_registry, \
+         patch("app.adapters.reranker.factory.get_reranker", return_value=RRFReranker(k=60)):
+        tool_semantic = MagicMock()
+        tool_semantic.arun = AsyncMock(return_value=[
+            {"chunk_id": "c1", "document_id": "d1", "text": "milvus result", "score": 0.8, "source": "milvus"},
+        ])
+        tool_keyword = MagicMock()
+        tool_keyword.arun = AsyncMock(return_value=[
+            {"chunk_id": "c2", "document_id": "d2", "text": "es result", "score": 50.0, "source": "keyword"},
+        ])
+
+        mock_registry_instance = MagicMock()
+        mock_registry_instance.get.side_effect = lambda name: {
+            "semantic_search": tool_semantic,
+            "keyword_search": tool_keyword,
+        }[name]
+        mock_registry.return_value = mock_registry_instance
+
+        state = _make_state(
+            sub_tasks=[{"id": "t1", "description": "find", "intent": "fact", "depends_on": [], "status": "pending"}],
+            routes={"t1": ["semantic_search", "keyword_search"]},
+        )
+        result = await executor_node(state)
+
+        metrics = result["routing_metrics"]
+        assert metrics is not None
+        assert metrics["tools_selected"] == {"semantic_search": 1, "keyword_search": 1}
+        assert metrics["results_per_tool"]["semantic_search"] == 1
+        assert metrics["results_per_tool"]["keyword_search"] == 1
+        assert metrics["source_diversity"] == 1.0  # both sources present
+        assert "milvus" in metrics["sources_in_final"]
+        assert "keyword" in metrics["sources_in_final"]

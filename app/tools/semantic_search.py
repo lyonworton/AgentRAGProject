@@ -1,5 +1,5 @@
 from app.tools.base import BaseTool
-from app.adapters.embedding.openai_embed import OpenAIEmbedding
+from app.core.embedding_factory import get_embedder
 from app.adapters.vector_store.milvus import MilvusStore
 from app.core.llm_factory import get_llm
 
@@ -11,7 +11,7 @@ Output JSON array of strings only.
 
 class SemanticSearchTool(BaseTool):
     name = "semantic_search"
-    description = "Vector semantic search via Milvus — best for fact lookup and concept matching"
+    description = "Vector semantic search via Milvus (BGE-M3 dense embeddings) — best for fact lookup and concept matching"
 
     async def _expand_queries(self, query: str, n: int = 3) -> list[str]:
         try:
@@ -29,7 +29,7 @@ class SemanticSearchTool(BaseTool):
     ) -> list[dict]:
         if not collection_ids:
             return []
-        embedder = OpenAIEmbedding()
+        embedder = get_embedder()
         store = MilvusStore()
         variants = await self._expand_queries(query)
         all_hits: list[dict] = []

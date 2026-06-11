@@ -16,6 +16,7 @@ class QueryOptions(BaseModel):
     quality_threshold: float = 0.7
     enable_web_search: bool = False
     response_style: str = "concise"
+    timeout: int = 45
 
 class QueryRequest(BaseModel):
     query: str
@@ -41,20 +42,43 @@ async def query_rag(req: QueryRequest, db: AsyncSession = Depends(get_db), user:
 
 @router.post("/stream")
 async def query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    import asyncio
     async def event_stream():
         import json
         from app.services.agent_service import AgentService
         opts = req.options.model_dump() if req.options else {}
         svc = AgentService()
         trace_id = uuid.uuid4().hex[:16]
-        async for msg in svc.run_stream(
-            req.query, req.collection_ids, req.session_id, opts):
-            data = msg["data"]
-            if msg["event"] == "done":
-                data["trace_id"] = trace_id
-            yield f"event: {msg['event']}\ndata: {json.dumps(data)}\n\n"
+        final_answer = ""
+        timeout = opts.get("timeout", 45)
+        try:
+            async with asyncio.timeout(timeout):
+                async for msg in svc.run_stream(
+                    req.query, req.collection_ids, req.session_id, opts):
+                    data = msg["data"]
+                    if msg["event"] == "done":
+                        data["trace_id"] = trace_id
+                        final_answer = data.get("answer", "")
+                    yield f"event: {msg['event']}\ndata: {json.dumps(data)}\n\n"
+        except asyncio.TimeoutError:
+            yield f"event: timeout\ndata: {json.dumps({'message': 'Request timed out', 'trace_id': trace_id})}\n\n"
         if req.session_id:
             await session_service.add_message(db, req.session_id, role="user", content=req.query)
+            if final_answer:
+                citations = []
+                try:
+                    citations = json.dumps(
+                        [{"chunk_id": c["chunk_id"], "document_title": c.get("document_title", ""),
+                          "text": c.get("text", ""), "relevance": c.get("relevance", 0)}
+                         for c in (data.get("citations") or [])[:20]]
+                    )
+                except Exception:
+                    citations = "[]"
+                await session_service.add_message(
+                    db, req.session_id, role="assistant",
+                    content=final_answer, trace_id=trace_id,
+                    citations=json.loads(citations) if isinstance(citations, str) else citations
+                )
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 @router.get("/{trace_id}/trace")

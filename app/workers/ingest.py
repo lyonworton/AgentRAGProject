@@ -17,7 +17,7 @@ async def start_ingest_job(
     user_id: str,
     source_type: str,
     source_config: dict,
-    embedding_dim: int = 1536,
+    embedding_dim: int = -1,
 ):
     """ARQ job: 启动摄入管道。
 

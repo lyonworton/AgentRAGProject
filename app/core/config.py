@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
     llm_model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-small"
+    bge_embedding_model: str = "BAAI/bge-m3"
+    embedding_dim: int = 1024
+    use_gpu: bool = False
     llm_provider: str = "openai"  # "openai" | "ollama"
     ollama_model: str = "qwen2.5"
     ollama_base_url: str = "http://localhost:11434"
@@ -32,6 +35,13 @@ class Settings(BaseSettings):
 
     # Elasticsearch
     es_host: str = "http://localhost:9200"
+
+    # Reranker (Phase 5)
+    reranker_provider: str = "rrf"                 # rrf | bge | cohere
+    reranker_model: str = "BAAI/bge-reranker-v2-m3"
+    reranker_top_k: int = 20
+    rrf_k: int = 60
+    cohere_api_key: str = ""
 
     model_config = {"env_file": ".env", "case_sensitive": False}
 

@@ -57,5 +57,25 @@ async def health():
         checks["milvus"] = f"error: {e}"
         status["status"] = "degraded"
 
+    # Neo4j (Phase 5)
+    try:
+        from app.core.di import get_kg_store
+        kg = await get_kg_store()
+        await kg.ahealth_check()
+        checks["neo4j"] = "ok"
+    except Exception as e:
+        checks["neo4j"] = f"error: {e}"
+        status["status"] = "degraded"
+
+    # Elasticsearch (Phase 5)
+    try:
+        from app.core.di import get_search_store
+        es = await get_search_store()
+        await es.ahealth_check()
+        checks["elasticsearch"] = "ok"
+    except Exception as e:
+        checks["elasticsearch"] = f"error: {e}"
+        status["status"] = "degraded"
+
     status["checks"] = checks
     return status

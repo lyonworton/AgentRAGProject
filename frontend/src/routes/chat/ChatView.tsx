@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { Send } from 'lucide-react'
+import { Send, StopCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { StatusBar } from '@/components/chat/StatusBar'
@@ -18,8 +18,42 @@ interface Citation {
   chunk_id?: string
 }
 
+interface ThoughtItem {
+  phase: string
+  text: string
+  score?: number
+  claims?: Array<{text: string; status: string}>
+}
+
 interface Props {
   selectedCollectionId: string
+}
+
+function ThoughtBubble({ thought }: { thought: ThoughtItem }) {
+  return (
+    <div className="flex justify-start my-1">
+      <div className="max-w-[85%] rounded-lg px-3 py-2 bg-muted/30 border border-muted text-xs text-muted-foreground">
+        <span className="font-medium text-foreground/70">{thought.phase}</span>
+        <span className="mx-1">·</span>
+        <span>{thought.text}</span>
+        {thought.score !== undefined && (
+          <span className="ml-1 text-blue-500">({(thought.score * 100).toFixed(0)}%)</span>
+        )}
+        {thought.claims && thought.claims.length > 0 && (
+          <div className="mt-1 space-y-0.5">
+            {thought.claims.map((c, i) => (
+              <div key={i} className="flex gap-1">
+                <span className={c.status === 'verified' ? 'text-green-500' : c.status === 'contradicted' ? 'text-red-500' : 'text-yellow-500'}>
+                  {c.status === 'verified' ? '✓' : c.status === 'contradicted' ? '✗' : '?'}
+                </span>
+                <span className="truncate">{c.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export function ChatView({ selectedCollectionId }: Props) {
@@ -28,10 +62,13 @@ export function ChatView({ selectedCollectionId }: Props) {
     messages,
     isStreaming,
     statusBar,
+    thoughts,
     citations,
     error,
     timedOut,
+    latencyMs,
     send,
+    abort,
     retry,
     bottomRef,
   } = useChatStream(selectedCollectionId, sessionId)
@@ -43,6 +80,10 @@ export function ChatView({ selectedCollectionId }: Props) {
   function handleSend() {
     send(input)
     setInput('')
+  }
+
+  function handleAbort() {
+    abort()
   }
 
   return (
@@ -69,7 +110,15 @@ export function ChatView({ selectedCollectionId }: Props) {
                   <FeedbackButtons traceId={m.traceId} />
                 </div>
               )}
+              {!m.streaming && m.latencyMs && m.role === 'assistant' && m.content && (
+                <div className="flex justify-start pl-1 text-xs text-muted-foreground/50">
+                  {(m.latencyMs / 1000).toFixed(1)}s
+                </div>
+              )}
             </div>
+          ))}
+          {thoughts.map((t, i) => (
+            <ThoughtBubble key={`thought-${i}`} thought={t} />
           ))}
           {error && (
             <div className="text-center">
@@ -95,9 +144,15 @@ export function ChatView({ selectedCollectionId }: Props) {
               placeholder="Ask a question..."
               disabled={isStreaming}
             />
-            <Button onClick={handleSend} disabled={isStreaming || !input.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
+            {isStreaming ? (
+              <Button onClick={handleAbort} variant="destructive">
+                <StopCircle className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button onClick={handleSend} disabled={!input.trim()}>
+                <Send className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

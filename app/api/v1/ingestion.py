@@ -1,8 +1,9 @@
 import os
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from app.core.di import get_db
 from app.core.config import get_settings
 from app.api.deps import get_current_user
@@ -49,6 +50,13 @@ class IngestJobListItem(BaseModel):
     total_docs: int; completed_docs: int; failed_docs: int
     errors: list; started_at: str | None; completed_at: str | None; created_at: str | None
     model_config = {"from_attributes": True}
+
+    @field_validator("started_at", "completed_at", "created_at", mode="before")
+    @classmethod
+    def _datetime_to_str(cls, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
 
 @router.get("", response_model=list[IngestJobListItem])
 async def list_ingest_jobs(

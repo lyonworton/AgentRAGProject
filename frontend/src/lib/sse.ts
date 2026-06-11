@@ -1,13 +1,21 @@
-interface StatusEvent { phase: string; message: string }
+interface StatusEvent { phase: string; message: string; iteration: number }
+interface ThoughtEvent { phase: string; text: string; score?: number; claims?: Array<{text: string; status: string}> }
 interface ChunkEvent { text: string; citations: any[] }
-interface DoneEvent { trace_id: string; citations: any[]; iterations: number; quality_score: number }
+interface DoneEvent { trace_id: string; answer: string; citations: any[]; iterations: number; quality_score: number; timed_out?: boolean; latency_ms?: number }
+interface TimeoutEvent { message: string; trace_id: string }
+
+export interface SSECallbacks {
+  onStatus: (data: StatusEvent) => void
+  onThought: (data: ThoughtEvent) => void
+  onChunk: (data: ChunkEvent) => void
+  onDone: (data: DoneEvent) => void
+  onTimeout: (data: TimeoutEvent) => void
+}
 
 export async function fetchSSE(
   url: string,
   body: object,
-  onStatus: (data: StatusEvent) => void,
-  onChunk: (data: ChunkEvent) => void,
-  onDone: (data: DoneEvent) => void,
+  callbacks: SSECallbacks,
   signal: AbortSignal,
 ): Promise<void> {
   const token = localStorage.getItem('token')
@@ -48,9 +56,13 @@ export async function fetchSSE(
         const dataStr = line.slice(6)
         try {
           const data = JSON.parse(dataStr)
-          if (currentEvent === 'status') onStatus(data)
-          else if (currentEvent === 'chunk') onChunk(data)
-          else if (currentEvent === 'done') onDone(data)
+          switch (currentEvent) {
+            case 'status': callbacks.onStatus(data); break
+            case 'thought': callbacks.onThought(data); break
+            case 'chunk': callbacks.onChunk(data); break
+            case 'done': callbacks.onDone(data); break
+            case 'timeout': callbacks.onTimeout(data); break
+          }
         } catch { /* skip malformed JSON */ }
       }
     }

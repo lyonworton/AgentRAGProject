@@ -25,8 +25,8 @@ class LongTermMemoryStore:
     ) -> LongTermMemory:
         embedding = None
         try:
-            from app.adapters.embedding.openai_embed import OpenAIEmbedding
-            embedder = OpenAIEmbedding()
+            from app.core.embedding_factory import get_embedder
+            embedder = get_embedder()
             text_to_embed = json.dumps(content, ensure_ascii=False)
             embedding = await embedder.aembed_query(text_to_embed)
         except Exception:
@@ -67,9 +67,8 @@ class LongTermMemoryStore:
         self, query: str, user_id: str, top_k: int = 10
     ) -> list[LongTermMemory]:
         try:
-            from app.adapters.embedding.openai_embed import OpenAIEmbedding
             from app.adapters.vector_store.milvus import MilvusStore
-            embedder = OpenAIEmbedding()
+            embedder = get_embedder()
             qe = await embedder.aembed_query(query)
             store = MilvusStore()
             hits = await store.search_memories(qe, top_k=top_k)

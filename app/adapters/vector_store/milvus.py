@@ -47,7 +47,7 @@ class MilvusStore(BaseVectorStore):
     # === Memory collection support ===
     _MEMORIES_READY = False
 
-    async def ensure_memories_collection(self, dim: int = 1536) -> None:
+    async def ensure_memories_collection(self, dim: int = 1024) -> None:
         """Create the memories collection if it does not exist."""
         name = "memories"
         if utility.has_collection(name):

@@ -1,5 +1,5 @@
-from app.adapters.embedding.openai_embed import OpenAIEmbedding
+from app.core.embedding_factory import get_embedder
 
 async def embed_chunks(chunks):
-    embedder = OpenAIEmbedding()
+    embedder = get_embedder()
     return await embedder.aembed_documents([c["text"] for c in chunks])

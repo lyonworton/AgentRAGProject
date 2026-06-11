@@ -27,6 +27,12 @@ class Citation(TypedDict):
     text: str
     relevance: float
 
+class RoutingMetrics(TypedDict):
+    tools_selected: dict[str, int]
+    results_per_tool: dict[str, int]
+    sources_in_final: list[str]
+    source_diversity: float
+
 class AgentState(TypedDict, total=False):
     query: str
     conversation_history: List[dict]
@@ -57,3 +63,6 @@ class AgentState(TypedDict, total=False):
     collection_ids: List[str]
     session_id: str
     enable_web_search: bool
+    routing_metrics: RoutingMetrics | None
+    memory_context: dict | None
+    route_suggestions: list[dict]

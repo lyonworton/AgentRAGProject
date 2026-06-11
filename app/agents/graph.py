@@ -31,8 +31,27 @@ async def memory_node(state: AgentState) -> AgentState:
         existing_msgs = (existing or {}).get('messages', [])
         existing_msgs.extend(window_entry)
         await memory.save_window(session_id, existing_msgs)
-        summary = answer[:500] if len(answer) > 500 else answer
+        # Phase 7: Progressive summarization — merge with previous summary
+        old_context = {}
+        try:
+            old_context = await memory.get_context(session_id)
+        except Exception:
+            pass
+        old_summary = old_context.get("summary", "") if old_context else ""
+        from app.memory.summarizer import progressive_summarize
+        summary = await progressive_summarize(old_summary, query, answer)
         await memory.save_summary(session_id, summary)
+
+        # Phase 7 SP3: Extract entities → Neo4j UserMemory (fire-and-forget)
+        if session_id and session_id != 'default':
+            try:
+                from app.memory.kg_bridge import extract_entities, save_session_entities
+                entities = await extract_entities(query, answer)
+                if entities:
+                    await save_session_entities(session_id, entities)
+            except Exception:
+                import structlog
+                structlog.get_logger().warning('kg_entity_persist_failed', exc_info=True)
     except Exception:
         import structlog
         structlog.get_logger().warning('memory_node_persist_failed', exc_info=True)
@@ -44,8 +63,12 @@ async def should_continue(state: AgentState) -> str:
         return "synthesize"
     if state["quality_score"] >= 0.7:
         return "verify"
-    if state.get("prev_score") and state["quality_score"] <= state["prev_score"]:
+    if state.get("prev_score") is not None and state["quality_score"] <= state["prev_score"]:
         return "verify"
+    # Empty results after execution → no point looping
+    retrieved = state.get("retrieved")
+    if retrieved is not None and not retrieved:
+        return "synthesize"
     state["iteration"] += 1
     state["prev_score"] = state["quality_score"]
     return "route"

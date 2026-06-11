@@ -14,6 +14,8 @@ services:
     environment:
       ETCD_AUTO_COMPACTION_MODE: revision
       ETCD_AUTO_COMPACTION_RETENTION: "1000"
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
 
   minio:
     image: minio/minio:latest
@@ -43,8 +45,24 @@ services:
       DATABASE_URL: postgresql+asyncpg://agentrag:agentrag@postgres:5432/agentrag
       MILVUS_HOST: milvus
       REDIS_URL: redis://redis:6379/0
-    depends_on: [postgres, milvus, redis]
-    volumes: ["./uploads:/app/uploads"]
+      NEO4J_URI: bolt://neo4j:7687
+      ES_HOST: http://elasticsearch:9200
+      HF_HOME: /app/models
+      RERANKER_MODEL: /app/models/BAAI/bge-reranker-v2-m3
+      TRANSFORMERS_OFFLINE: "1"
+    mem_limit: 3g
+    depends_on:
+      postgres:
+        condition: service_started
+      milvus:
+        condition: service_started
+      redis:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    volumes: ["./uploads:/app/uploads", "D:/models:/app/models"]
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   arq-worker:
@@ -54,10 +72,26 @@ services:
       DATABASE_URL: postgresql+asyncpg://agentrag:agentrag@postgres:5432/agentrag
       MILVUS_HOST: milvus
       REDIS_URL: redis://redis:6379/0
-    depends_on: [postgres, milvus, redis]
+      NEO4J_URI: bolt://neo4j:7687
+      ES_HOST: http://elasticsearch:9200
+      HF_HOME: /app/models
+      RERANKER_MODEL: /app/models/BAAI/bge-reranker-v2-m3
+      TRANSFORMERS_OFFLINE: "1"
+    volumes: ["./uploads:/app/uploads", "D:/models:/app/models"]
+    depends_on:
+      postgres:
+        condition: service_started
+      milvus:
+        condition: service_started
+      redis:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     command: arq app.workers.main.WorkerSettings
 
-  # === Phase 2 ===
+  # === Phase 2 (Phase 5 enabled) ===
   neo4j:
     image: neo4j:5
     ports: ["7474:7474", "7687:7687"]
@@ -66,6 +100,10 @@ services:
     volumes: [neo4jdata:/data]
     healthcheck:
       test: ["CMD-SHELL", "echo 'RETURN 1' | cypher-shell -u neo4j -p $${NEO4J_PASSWORD:-agentrag123} || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   elasticsearch:
     build:
@@ -75,8 +113,14 @@ services:
     environment:
       discovery.type: single-node
       xpack.security.enabled: false
-      ES_JAVA_OPTS: -Xms1g -Xmx1g
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
     volumes: [esdata:/usr/share/elasticsearch/data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health | grep -q 'green\\|yellow' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   # === Phase 3 ===
   frontend:

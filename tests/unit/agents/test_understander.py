@@ -45,3 +45,18 @@ class TestUnderstandNode:
             state = await understand_node(_make_state(""))
         assert state["intent"] == "fact"
         assert state["sub_tasks"] == []
+
+    async def test_can_output_exact_intent(self):
+        mock_llm = AsyncMock()
+        mock_llm.agenerate_structured.return_value = {
+            "intent": "exact",
+            "rewritten_query": "DOC-12345",
+            "sub_tasks": [
+                {"id": "t1", "description": "Find document DOC-12345", "intent": "exact", "depends_on": []},
+            ],
+        }
+        with patch("app.agents.understander.get_llm", return_value=mock_llm):
+            from app.agents.understander import understand_node
+            state = await understand_node(_make_state('Find "DOC-12345"'))
+        assert state["intent"] == "exact"
+        assert state["sub_tasks"][0]["intent"] == "exact"

@@ -9,8 +9,14 @@ _INDEX_SETTINGS = {
     "settings": {
         "analysis": {
             "analyzer": {
-                "ik_max_word_analyzer": {"type": "custom", "tokenizer": "ik_max_word"},
-                "ik_smart_analyzer": {"type": "custom", "tokenizer": "ik_smart"},
+                "ik_max_word_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "ik_max_word",
+                },
+                "ik_smart_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "ik_smart",
+                },
             }
         }
     },
@@ -37,7 +43,7 @@ _INDEX_SETTINGS = {
 
 
 class ElasticsearchStore(BaseSearchStore):
-    """Elasticsearch full-text search store with IK Chinese tokenizer."""
+    """Elasticsearch full-text search store with IK analyzer (ik_max_word / ik_smart)."""
 
     def __init__(self) -> None:
         settings = get_settings()
@@ -47,6 +53,9 @@ class ElasticsearchStore(BaseSearchStore):
     async def aconnect(self) -> None:
         info = await self._client.info()
         logger.info("elasticsearch connected", version=info["version"]["number"])
+
+    async def ahealth_check(self) -> None:
+        await self._client.cluster.health()
 
     async def adisconnect(self) -> None:
         await self._client.close()
@@ -104,7 +113,11 @@ class ElasticsearchStore(BaseSearchStore):
                 filter_clauses.append({"term": {key: value}})
             body["query"]["bool"]["filter"] = filter_clauses
 
-        result = await self._client.search(index=index_name, body=body)
+        try:
+            result = await self._client.search(index=index_name, body=body)
+        except Exception:
+            return []  # index not found or search error
+
         hits = result["hits"]["hits"]
         return [
             {
