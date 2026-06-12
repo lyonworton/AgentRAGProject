@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, field_serializer
 from app.core.di import get_db
 from app.core.config import get_settings
 from app.api.deps import get_current_user
@@ -122,8 +122,14 @@ async def ingest_database(req: DatabaseIngestRequest, db: AsyncSession = Depends
 
 class IngestJobResponse(BaseModel):
     id: str; status: str; total_docs: int; completed_docs: int
-    failed_docs: int; errors: list; started_at: str | None; completed_at: str | None
+    failed_docs: int; errors: list; started_at: datetime | None; completed_at: datetime | None
     model_config = {"from_attributes": True}
+
+    @field_serializer("started_at", "completed_at")
+    def _serialize_dates(self, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
 
 @router.get("/{job_id}", response_model=IngestJobResponse)
 async def get_ingest_status(job_id: str, db: AsyncSession = Depends(get_db),
@@ -132,3 +138,13 @@ async def get_ingest_status(job_id: str, db: AsyncSession = Depends(get_db),
     if not job or job.user_id != user.id:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+
+@router.delete("/{job_id}", status_code=204)
+async def delete_ingest_job(job_id: str, db: AsyncSession = Depends(get_db),
+                            user: User = Depends(get_current_user)):
+    job = await db.get(IngestJob, job_id)
+    if not job or job.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Job not found")
+    await db.delete(job)
+    await db.commit()
