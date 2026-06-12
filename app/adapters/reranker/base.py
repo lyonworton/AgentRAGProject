@@ -46,4 +46,13 @@ class TwoStageReranker(BaseReranker):
         candidates = await self._s1.rerank(query, documents, self._top_k)
         if not candidates:
             return []
-        return await self._s2.rerank(query, candidates, top_k)
+        try:
+            return await self._s2.rerank(query, candidates, top_k)
+        except Exception:
+            import structlog
+            structlog.get_logger().warning(
+                "two_stage_reranker_stage2_failed_falling_back_to_rrf",
+                exc_info=True,
+            )
+            candidates.sort(key=lambda d: d.get("_rerank_score", 0), reverse=True)
+            return candidates[:top_k]

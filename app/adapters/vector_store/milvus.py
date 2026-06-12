@@ -28,7 +28,7 @@ class MilvusStore(BaseVectorStore):
         rows = [{ "chunk_id":ch["chunk_id"],"document_id":ch["document_id"],"text":ch["text"],
             "embedding":embeddings[i],"metadata":ch.get("metadata",{}),
             "chunk_index":ch.get("chunk_index",0),"parent_chunk_id":ch.get("parent_chunk_id","")} for i,ch in enumerate(chunks)]
-        col.insert([rows]); col.flush()
+        col.insert(rows); col.flush()
 
     async def search(self, name, qe, top_k=10):
         col = Collection(name); col.load()
@@ -70,7 +70,7 @@ class MilvusStore(BaseVectorStore):
             await self.ensure_memories_collection(len(embedding))
         col = Collection("memories")
         rows = [{"memory_id": memory_id, "embedding": embedding, "text": text}]
-        col.insert([rows])
+        col.insert(rows)
         col.flush()
 
     async def search_memories(self, query_embedding: list[float], top_k: int = 10) -> list[SearchResult]:

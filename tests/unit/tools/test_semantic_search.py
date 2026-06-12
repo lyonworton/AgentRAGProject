@@ -9,7 +9,7 @@ async def test_semantic_search_returns_unified_format():
     assert tool.name == "semantic_search"
     assert "Milvus" in tool.description
 
-    with patch("app.tools.semantic_search.OpenAIEmbedding") as mock_emb, \
+    with patch("app.tools.semantic_search.get_embedder") as mock_get_emb, \
          patch("app.tools.semantic_search.MilvusStore") as mock_store, \
          patch("app.tools.semantic_search.get_llm") as mock_llm:
 
@@ -21,7 +21,7 @@ async def test_semantic_search_returns_unified_format():
 
         mock_emb_instance = MagicMock()
         mock_emb_instance.aembed_query = AsyncMock(return_value=[0.1] * 1536)
-        mock_emb.return_value = mock_emb_instance
+        mock_get_emb.return_value = mock_emb_instance
 
         from app.adapters.vector_store.base import SearchResult
         mock_store_instance = MagicMock()
@@ -43,7 +43,7 @@ async def test_semantic_search_returns_unified_format():
 @pytest.mark.asyncio
 async def test_semantic_search_deduplicates_by_chunk_id():
     tool = SemanticSearchTool()
-    with patch("app.tools.semantic_search.OpenAIEmbedding") as mock_emb, \
+    with patch("app.tools.semantic_search.get_embedder") as mock_get_emb, \
          patch("app.tools.semantic_search.MilvusStore") as mock_store, \
          patch("app.tools.semantic_search.get_llm") as mock_llm:
 
@@ -53,7 +53,7 @@ async def test_semantic_search_deduplicates_by_chunk_id():
 
         mock_emb_instance = MagicMock()
         mock_emb_instance.aembed_query = AsyncMock(return_value=[0.1] * 1536)
-        mock_emb.return_value = mock_emb_instance
+        mock_get_emb.return_value = mock_emb_instance
 
         from app.adapters.vector_store.base import SearchResult
         mock_store_instance = MagicMock()
@@ -77,7 +77,7 @@ async def test_semantic_search_empty_collections():
 @pytest.mark.asyncio
 async def test_semantic_search_expand_queries_failure_uses_original():
     tool = SemanticSearchTool()
-    with patch("app.tools.semantic_search.OpenAIEmbedding") as mock_emb, \
+    with patch("app.tools.semantic_search.get_embedder") as mock_get_emb, \
          patch("app.tools.semantic_search.MilvusStore") as mock_store, \
          patch("app.tools.semantic_search.get_llm") as mock_llm:
 
@@ -87,7 +87,7 @@ async def test_semantic_search_expand_queries_failure_uses_original():
 
         mock_emb_instance = MagicMock()
         mock_emb_instance.aembed_query = AsyncMock(return_value=[0.1] * 1536)
-        mock_emb.return_value = mock_emb_instance
+        mock_get_emb.return_value = mock_emb_instance
 
         from app.adapters.vector_store.base import SearchResult
         mock_store_instance = MagicMock()

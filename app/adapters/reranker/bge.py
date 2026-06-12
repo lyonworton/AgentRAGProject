@@ -45,7 +45,20 @@ class BGEReranker(BaseReranker):
         if not documents:
             return []
 
-        self._load_model()
+        # Lazy-load model with timeout — FlagReranker.__init__ can hang in PyTorch threads
+        if self._model is None:
+            try:
+                await asyncio.wait_for(
+                    asyncio.to_thread(self._load_model),
+                    timeout=30.0,
+                )
+            except (asyncio.TimeoutError, Exception):
+                logger.warning(
+                    "BGE reranker model load timed out after 30s, "
+                    "falling back to original document order"
+                )
+                documents.sort(key=lambda d: d.get("score", 0), reverse=True)
+                return documents[:top_k]
 
         pairs = [[query, doc["text"]] for doc in documents]
         scores = await asyncio.to_thread(self._model.compute_score, pairs)

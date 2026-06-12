@@ -1,3 +1,4 @@
+import asyncio
 from app.tools.base import BaseTool
 from app.core.embedding_factory import get_embedder
 from app.adapters.vector_store.milvus import MilvusStore
@@ -16,12 +17,15 @@ class SemanticSearchTool(BaseTool):
     async def _expand_queries(self, query: str, n: int = 3) -> list[str]:
         try:
             llm = get_llm()
-            result = await llm.agenerate_structured(
-                QUERY_EXPAND_PROMPT.format(n=n) + f"\nTask: {query}",
-                output_schema={"type": "array", "items": {"type": "string"}},
+            result = await asyncio.wait_for(
+                llm.agenerate_structured(
+                    QUERY_EXPAND_PROMPT.format(n=n) + f"\nTask: {query}",
+                    output_schema={"type": "array", "items": {"type": "string"}},
+                ),
+                timeout=8.0,
             )
             return result if isinstance(result, list) else [query]
-        except Exception:
+        except (asyncio.TimeoutError, Exception):
             return [query]
 
     async def arun(

@@ -34,6 +34,11 @@ async def on_startup():
     except Exception as e:
         logger.warning("embedding model unavailable, vector search disabled", error=str(e))
 
+    # NOTE: BGE reranker model (BAAI/bge-reranker-v2-m3) is loaded lazily on first use.
+    # Background prewarming was attempted but FlagReranker.__init__ hangs in a thread,
+    # blocking the event loop and causing the container to become unresponsive.
+    # Lazy loading with 8s timeout (in BGEReranker.rerank) is the safer fallback.
+
 
 async def on_shutdown():
     logger.info("app shutting down")

@@ -44,10 +44,10 @@ async def _execute_task(
         try:
             return await asyncio.wait_for(
                 registry.get(name).arun(task["description"], collection_ids),
-                timeout=5.0,
+                timeout=60.0,
             )
         except asyncio.TimeoutError:
-            return TimeoutError(f"Tool {name} timed out after 5s")
+            return TimeoutError(f"Tool {name} timed out after 60s — BGE model may still be loading")
         except Exception as e:
             return e
 
