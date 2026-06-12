@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Trash2, Search } from 'lucide-react'
 import { useCollection } from '@/hooks/useCollection'
 import { useDocuments } from '@/hooks/useDocuments'
 import { deleteDocument } from '@/api/documents'
+import { deleteCollection } from '@/api/collections'
 import { queryRAG } from '@/api/queries'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +25,8 @@ export function CollectionDetail() {
   const [sq, setSq] = useState('')
   const [sr, setSr] = useState<any>(null)
   const [searching, setSearching] = useState(false)
+  const navigate = useNavigate()
+  const [deletingCol, setDeletingCol] = useState(false)
 
   async function handleDeleteDoc(docId: string) {
     if (!id || !confirm('Delete this document?')) return
@@ -31,6 +34,14 @@ export function CollectionDetail() {
     try { await deleteDocument(id, docId); rDocs() }
     catch (e: any) { alert(e?.message || 'Delete failed') }
     finally { setDelId(null) }
+  }
+
+  async function handleDeleteCollection() {
+    if (!id || !confirm('Delete this collection and all its documents? This cannot be undone.')) return
+    setDeletingCol(true)
+    try { await deleteCollection(id); navigate('/') }
+    catch (e: any) { alert(e?.message || 'Delete failed') }
+    finally { setDeletingCol(false) }
   }
 
   async function handleSearch() {
@@ -59,6 +70,13 @@ export function CollectionDetail() {
       <div>
         <h1 className="text-xl font-bold">{col.name}</h1>
         <p className="text-sm text-muted-foreground">{col.description || 'No description'}</p>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div />
+        <Button variant="destructive" size="sm" disabled={deletingCol} onClick={handleDeleteCollection}>
+          <Trash2 className="h-4 w-4 mr-1" /> Delete Collection
+        </Button>
       </div>
 
       <div className="flex gap-2 border-b">
