@@ -26,6 +26,10 @@ export function getIngestJob(jobId: string): Promise<IngestJob> {
   return request<IngestJob>(`/ingest/${jobId}`)
 }
 
+export function deleteIngestJob(jobId: string): Promise<void> {
+  return request<void>(`/ingest/${jobId}`, { method: 'DELETE' })
+}
+
 export function ingestLocal(colId: string, files: File[]): Promise<{ job_id: string; arq_job_id: string; file_count: number }> {
   const fd = new FormData()
   fd.append('collection_id', colId)
