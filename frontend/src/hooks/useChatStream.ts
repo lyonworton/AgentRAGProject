@@ -142,6 +142,7 @@ export function useChatStream(
                 if (i === prev.length - 1 && m.role === 'assistant') {
                   return {
                     ...m,
+                    content: data.answer || m.content,
                     streaming: false,
                     citations: data.citations,
                     traceId: data.trace_id,
