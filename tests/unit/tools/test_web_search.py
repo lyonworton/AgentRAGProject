@@ -6,9 +6,18 @@ from unittest.mock import patch, AsyncMock, MagicMock
 @pytest.fixture(autouse=True)
 def _mock_heavy_deps():
     """Prevent import errors from missing heavy deps in local env."""
+    _saved = {}
     for mod in ("pymilvus", "structlog", "neo4j", "elasticsearch"):
-        sys.modules[mod] = MagicMock()
+        _saved[mod] = sys.modules.pop(mod, None)
+    for mod in _saved:
+        if _saved[mod] is not None:
+            sys.modules[mod] = MagicMock()
     yield
+    for mod, orig in _saved.items():
+        if orig is not None:
+            sys.modules[mod] = orig
+        elif mod in sys.modules:
+            del sys.modules[mod]
 
 
 class TestWebSearchTool:
