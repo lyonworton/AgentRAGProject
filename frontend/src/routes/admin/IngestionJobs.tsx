@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { useCollections } from '@/hooks/useCollections'
 import { useIngestionJobs } from '@/hooks/useIngestionJobs'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -6,6 +7,8 @@ import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { ErrorBanner } from '@/components/shared/ErrorBanner'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { deleteIngestJob } from '@/api/ingestion'
 
 export function IngestionJobs() {
   const { data: cols } = useCollections()
@@ -14,6 +17,15 @@ export function IngestionJobs() {
     filterColId ? { collection_id: filterColId, limit: 50 } : { limit: 50 }
   )
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  async function handleDelete(jobId: string) {
+    if (!confirm('Delete this ingestion job?')) return
+    setDeleting(jobId)
+    try { await deleteIngestJob(jobId); refetch() }
+    catch (e: any) { alert(e?.message || 'Delete failed') }
+    finally { setDeleting(null) }
+  }
 
   if (loading) return <LoadingSpinner />
   if (error) return <ErrorBanner message={error} onRetry={refetch} />
@@ -44,6 +56,7 @@ export function IngestionJobs() {
                   <th className="p-3 font-medium">Progress</th>
                   <th className="p-3 font-medium">Status</th>
                   <th className="p-3 font-medium">Created</th>
+                  <th className="p-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -56,10 +69,17 @@ export function IngestionJobs() {
                       <td className="p-3">{j.completed_docs}/{j.total_docs}</td>
                       <td className="p-3"><StatusBadge status={j.status} /></td>
                       <td className="p-3 text-xs text-muted-foreground">{j.created_at ? new Date(j.created_at).toLocaleString() : '-'}</td>
+                      <td className="p-3">
+                        {(j.status !== 'running' && j.status !== 'processing') && (
+                          <Button variant="ghost" size="icon" disabled={deleting === j.id} onClick={e => { e.stopPropagation(); handleDelete(j.id) }}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </td>
                     </tr>
                     {expanded === j.id && j.errors && j.errors.length > 0 && (
                       <tr key={`${j.id}-err`} className="bg-muted/30">
-                        <td colSpan={6} className="p-3">
+                        <td colSpan={7} className="p-3">
                           <pre className="text-xs text-destructive whitespace-pre-wrap">{JSON.stringify(j.errors, null, 2)}</pre>
                         </td>
                       </tr>
