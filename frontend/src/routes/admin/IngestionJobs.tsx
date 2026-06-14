@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Square } from 'lucide-react'
 import { useCollections } from '@/hooks/useCollections'
 import { useIngestionJobs } from '@/hooks/useIngestionJobs'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -8,7 +8,7 @@ import { ErrorBanner } from '@/components/shared/ErrorBanner'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { deleteIngestJob } from '@/api/ingestion'
+import { deleteIngestJob, cancelIngestJob } from '@/api/ingestion'
 
 export function IngestionJobs() {
   const { data: cols } = useCollections()
@@ -18,6 +18,15 @@ export function IngestionJobs() {
   )
   const [expanded, setExpanded] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [cancelling, setCancelling] = useState<string | null>(null)
+
+  async function handleCancel(jobId: string) {
+    if (!confirm('Cancel this ingestion job?')) return
+    setCancelling(jobId)
+    try { await cancelIngestJob(jobId); refetch() }
+    catch (e: any) { alert(e?.message || 'Cancel failed') }
+    finally { setCancelling(null) }
+  }
 
   async function handleDelete(jobId: string) {
     if (!confirm('Delete this ingestion job?')) return
@@ -70,11 +79,16 @@ export function IngestionJobs() {
                       <td className="p-3"><StatusBadge status={j.status} /></td>
                       <td className="p-3 text-xs text-muted-foreground">{j.created_at ? new Date(j.created_at).toLocaleString() : '-'}</td>
                       <td className="p-3">
-                        {(j.status !== 'running' && j.status !== 'processing') && (
-                          <Button variant="ghost" size="icon" disabled={deleting === j.id} onClick={e => { e.stopPropagation(); handleDelete(j.id) }}>
+                        <div className="flex items-center gap-1">
+                          {['running', 'processing', 'pending'].includes(j.status) && (
+                            <Button variant="ghost" size="icon" disabled={cancelling === j.id} onClick={e => { e.stopPropagation(); handleCancel(j.id) }} title="Cancel">
+                              <Square className="h-4 w-4 text-amber-500" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" disabled={deleting === j.id} onClick={e => { e.stopPropagation(); handleDelete(j.id) }} title="Delete">
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                     {expanded === j.id && j.errors && j.errors.length > 0 && (

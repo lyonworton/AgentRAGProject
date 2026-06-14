@@ -26,6 +26,10 @@ export function getIngestJob(jobId: string): Promise<IngestJob> {
   return request<IngestJob>(`/ingest/${jobId}`)
 }
 
+export function cancelIngestJob(jobId: string): Promise<IngestJob> {
+  return request<IngestJob>(`/ingest/${jobId}/cancel`, { method: 'PUT' })
+}
+
 export function deleteIngestJob(jobId: string): Promise<void> {
   return request<void>(`/ingest/${jobId}`, { method: 'DELETE' })
 }

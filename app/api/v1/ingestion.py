@@ -140,9 +140,25 @@ async def get_ingest_status(job_id: str, db: AsyncSession = Depends(get_db),
     return job
 
 
+@router.put("/{job_id}/cancel", response_model=IngestJobResponse)
+async def cancel_ingest_job(job_id: str, db: AsyncSession = Depends(get_db),
+                            user: User = Depends(get_current_user)):
+    """Cancel a running/processing/pending ingestion job."""
+    job = await db.get(IngestJob, job_id)
+    if not job or job.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status not in ("running", "processing", "pending"):
+        raise HTTPException(status_code=400, detail=f"Cannot cancel job in '{job.status}' state")
+    job.status = "cancelled"
+    await db.commit()
+    await db.refresh(job)
+    return job
+
+
 @router.delete("/{job_id}", status_code=204)
 async def delete_ingest_job(job_id: str, db: AsyncSession = Depends(get_db),
                             user: User = Depends(get_current_user)):
+    """Delete an ingestion job (any status)."""
     job = await db.get(IngestJob, job_id)
     if not job or job.user_id != user.id:
         raise HTTPException(status_code=404, detail="Job not found")
