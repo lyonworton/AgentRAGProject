@@ -1,11 +1,26 @@
 from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, utility
 from app.adapters.vector_store.base import BaseVectorStore, SearchResult
 from app.core.config import get_settings
+
 settings = get_settings()
 
 class MilvusStore(BaseVectorStore):
+    _collections: dict = {}
+
     def __init__(self):
         connections.connect(alias="default", host=settings.milvus_host, port=settings.milvus_port)
+
+    def _get_collection(self, name: str) -> Collection:
+        if name not in self._collections:
+            if not utility.has_collection(name):
+                return None  # type: ignore
+            col = Collection(name)
+            try:
+                col.load()
+            except Exception:
+                pass
+            self._collections[name] = col
+        return self._collections[name]
 
     async def create_collection(self, name, dim):
         if utility.has_collection(name): return
@@ -31,7 +46,9 @@ class MilvusStore(BaseVectorStore):
         col.insert(rows); col.flush()
 
     async def search(self, name, qe, top_k=10):
-        col = Collection(name); col.load()
+        col = self._get_collection(name)
+        if col is None:
+            return []
         results = col.search(data=[qe],anns_field="embedding",
             param={"metric_type":"COSINE","params":{"nprobe":16}},limit=top_k,
             output_fields=["chunk_id","document_id","text","metadata"])

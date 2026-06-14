@@ -7,6 +7,7 @@ from app.ingestion.semantic_path.chunker import chunk_text
 from app.ingestion.semantic_path.embedder import embed_chunks
 from app.ingestion.semantic_path.milvus_writer import write_chunks_to_milvus
 from app.domain.document import Document
+from app.domain.collection import Collection
 from app.domain.ingest_job import IngestJob
 from app.adapters.document_loader.pdf import PDFLoader
 from app.adapters.document_loader.markdown import MarkdownLoader
@@ -32,28 +33,48 @@ async def run_graph_path(doc) -> None:
     from app.ingestion.graph_path.relation_extractor import extract_relations
     from app.ingestion.graph_path.neo4j_writer import write_graph_to_neo4j
     from app.core.di import get_kg_store
+    import structlog
+
+    logger = structlog.get_logger()
 
     candidates = extract_candidate_entities(doc.content)
     if not candidates:
         return
 
-    from app.core.llm_factory import get_llm
-    llm = get_llm()
-    result = await extract_relations(doc.content, candidates, llm)
+    try:
+        from app.core.llm_factory import get_llm
+        llm = get_llm()
+        result = await asyncio.wait_for(
+            extract_relations(doc.content, candidates, llm),
+            timeout=60.0,
+        )
 
-    kg_store = await get_kg_store()
-    await write_graph_to_neo4j(doc.id, result["entities"], result["relations"], kg_store)
+        kg_store = await get_kg_store()
+        await write_graph_to_neo4j(doc.id, result["entities"], result["relations"], kg_store)
+        logger.info("graph_path_complete", doc_id=doc.id, entities=len(result["entities"]))
+    except (asyncio.TimeoutError, Exception) as e:
+        logger.warning("graph_path_failed", doc_id=doc.id, error=str(e))
+        raise
 
 
 async def run_keyword_path(doc, collection_id: str) -> None:
     """关键词路径：全文档 → ES"""
     from app.ingestion.keyword_path.es_writer import write_document_to_es
     from app.core.di import get_search_store
+    import structlog
 
-    search_store = await get_search_store()
-    await write_document_to_es(
-        doc.id, collection_id, doc.title, doc.content, doc.metadata_, search_store
-    )
+    logger = structlog.get_logger()
+    try:
+        search_store = await get_search_store()
+        await asyncio.wait_for(
+            write_document_to_es(
+                doc.id, collection_id, doc.title, doc.content, doc.metadata_, search_store
+            ),
+            timeout=30.0,
+        )
+    except (asyncio.TimeoutError, Exception) as e:
+        logger.warning("keyword_path_failed", doc_id=doc.id, error=str(e))
+        raise
 
 
 def _compute_path_status(results: list) -> dict:
@@ -165,9 +186,15 @@ async def run_ingest_pipeline(
                         d.chunk_count = results[0] if isinstance(results[0], int) else 0
                         d.embedding_model = get_settings().bge_embedding_model
                         d.ingested_at = datetime.now(timezone.utc)
+                        # Update collection stats
+                        col = await db.get(Collection, collection_id)
+                        if col:
+                            col.doc_count = (col.doc_count or 0) + 1
+                            col.chunk_count = (col.chunk_count or 0) + d.chunk_count
+                            await db.commit()
                     else:
                         d.error_message = str(results[0])
-                    await db.commit()
+                        await db.commit()
 
             if final_status != "error":
                 completed += 1

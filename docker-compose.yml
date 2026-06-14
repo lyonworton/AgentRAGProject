@@ -78,6 +78,7 @@ services:
       RERANKER_MODEL: /app/models/BAAI/bge-reranker-v2-m3
       TRANSFORMERS_OFFLINE: "1"
     volumes: ["./uploads:/app/uploads", "D:/models:/app/models"]
+    restart: always
     depends_on:
       postgres:
         condition: service_started

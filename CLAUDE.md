@@ -8,6 +8,7 @@ Before calling Edit / Write / Bash, **always complete the following preflight ch
 1. Grep for all files that import/require the target file
 2. List the public functions/classes/exports affected by this change
 3. If the file reads/writes data, note field names, structure, and date format (use redacted or synthetic values — never paste raw production data)
+
 4. Quote the user's current instruction verbatim
 
 ### Before Write (new file)

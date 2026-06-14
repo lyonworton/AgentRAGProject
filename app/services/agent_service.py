@@ -253,7 +253,7 @@ class AgentService:
         """
         opts = options or {}
         t0 = time.monotonic()
-        timeout = opts.get("timeout", 45)
+        timeout = opts.get("timeout", 180)
 
         conversation_history, memory_context = await self._load_memory_context(session_id, query)
         initial_state = self._build_initial_state(

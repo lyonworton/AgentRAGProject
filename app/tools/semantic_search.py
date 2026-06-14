@@ -14,7 +14,7 @@ class SemanticSearchTool(BaseTool):
     name = "semantic_search"
     description = "Vector semantic search via Milvus (BGE-M3 dense embeddings) — best for fact lookup and concept matching"
 
-    async def _expand_queries(self, query: str, n: int = 3) -> list[str]:
+    async def _expand_queries(self, query: str, n: int = 1) -> list[str]:
         try:
             llm = get_llm()
             result = await asyncio.wait_for(
@@ -40,11 +40,19 @@ class SemanticSearchTool(BaseTool):
         seen: set[str] = set()
 
         for variant in variants:
-            qe = await embedder.aembed_query(variant)
+            try:
+                qe = await asyncio.wait_for(
+                    embedder.aembed_query(variant), timeout=30.0
+                )
+            except (asyncio.TimeoutError, Exception):
+                qe = [0.0] * 1024  # fallback embedding
+
             for col_id in collection_ids:
                 col_name = f"col_{col_id}"
                 try:
-                    hits = await store.search(col_name, qe, top_k=top_k)
+                    hits = await asyncio.wait_for(
+                        store.search(col_name, qe, top_k=top_k), timeout=10.0
+                    )
                     for hit in hits:
                         if hit.chunk_id not in seen:
                             all_hits.append({
@@ -55,7 +63,7 @@ class SemanticSearchTool(BaseTool):
                                 "source": "milvus",
                             })
                             seen.add(hit.chunk_id)
-                except Exception:
+                except (asyncio.TimeoutError, Exception):
                     continue
 
         return all_hits

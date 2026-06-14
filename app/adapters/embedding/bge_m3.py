@@ -76,7 +76,7 @@ class BGEEmbedding(BaseEmbedding):
                 show_progress_bar=False,
             )
 
-        result = await asyncio.to_thread(_encode)
+        result = await asyncio.wait_for(asyncio.to_thread(_encode), timeout=120.0)
         return result.tolist()
 
     async def aembed_query(self, query: str) -> list[float]:
@@ -89,7 +89,7 @@ class BGEEmbedding(BaseEmbedding):
             )
             return emb[0]
 
-        result = await asyncio.to_thread(_encode)
+        result = await asyncio.wait_for(asyncio.to_thread(_encode), timeout=120.0)
         return result.tolist()
 
     @classmethod
