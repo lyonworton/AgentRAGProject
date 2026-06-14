@@ -13,7 +13,7 @@ async def list_collections(db, owner_id):
     r = await db.execute(
         select(Collection).where(
             Collection.owner_id == owner_id,
-            Collection.status != "deleted",
+            Collection.status.notin_(["deleted", "archived"]),
         )
     )
     return r.scalars().all()
