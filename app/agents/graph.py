@@ -61,6 +61,9 @@ async def memory_node(state: AgentState) -> AgentState:
 async def should_continue(state: AgentState) -> str:
     if state["iteration"] >= state["max_iterations"]:
         return "synthesize"
+    # 高质量直接跳过 verify，省掉 ~5s
+    if state["quality_score"] >= 0.85:
+        return "synthesize"
     if state["quality_score"] >= 0.7:
         return "verify"
     if state.get("prev_score") is not None and state["quality_score"] <= state["prev_score"]:
@@ -68,6 +71,9 @@ async def should_continue(state: AgentState) -> str:
     # Empty results after execution → no point looping
     retrieved = state.get("retrieved")
     if retrieved is not None and not retrieved:
+        return "synthesize"
+    # 已查到足够多 chunks 但 quality 仍低 → 大概率是缺角度而非缺内容，不再循环
+    if len(retrieved) >= 40 and state["iteration"] >= 1:
         return "synthesize"
     state["iteration"] += 1
     state["prev_score"] = state["quality_score"]

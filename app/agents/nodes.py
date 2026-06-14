@@ -36,6 +36,22 @@ async def synthesize_node(state: AgentState) -> AgentState:
         state["uncertainty_flags"] = [{"note": "No relevant documents found", "severity": "high"}]
         return state
 
+    # 高质量直接复用 draft，省掉 ~5s
+    if state.get("quality_score", 0) >= 0.9 and state.get("draft_answer"):
+        state["final_answer"] = state["draft_answer"]
+        state["citations"] = [
+            {"chunk_id": r.get("chunk_id", "?"),
+             "document_title": r.get("document_id", "?"),
+             "text": r.get("text", "")[:200],
+             "relevance": r.get("score", 0)}
+            for r in state.get("retrieved", [])[:10]
+        ]
+        state["uncertainty_flags"] = [
+            {"text": c["text"], "status": c["status"]}
+            for c in state.get("verified_claims", []) if c["status"] != "verified"
+        ]
+        return state
+
     answer = await llm.agenerate(
         SYNTHESIZE_PROMPT.format(query=state["query"], chunks=chunks_text),
         system_prompt="You are a precise answer synthesizer. Only use provided sources."
