@@ -16,7 +16,7 @@ class QueryOptions(BaseModel):
     quality_threshold: float = 0.7
     enable_web_search: bool = False
     response_style: str = "concise"
-    timeout: int = 45
+    timeout: int = 180
 
 class QueryRequest(BaseModel):
     query: str
@@ -42,44 +42,61 @@ async def query_rag(req: QueryRequest, db: AsyncSession = Depends(get_db), user:
 
 @router.post("/stream")
 async def query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    import asyncio
-    async def event_stream():
-        import json
-        from app.services.agent_service import AgentService
-        opts = req.options.model_dump() if req.options else {}
-        svc = AgentService()
-        trace_id = uuid.uuid4().hex[:16]
-        final_answer = ""
-        timeout = opts.get("timeout", 45)
+    import asyncio, json
+    from app.services.agent_service import AgentService
+
+    opts = req.options.model_dump() if req.options else {}
+    svc = AgentService()
+    trace_id = uuid.uuid4().hex[:16]
+    timeout = opts.get("timeout", 180)
+
+    final_answer = ""
+    last_citations: list = []
+    all_thoughts: list = []
+
+    async def event_generator():
+        nonlocal final_answer, last_citations, all_thoughts
+
         try:
             async with asyncio.timeout(timeout):
                 async for msg in svc.run_stream(
                     req.query, req.collection_ids, req.session_id, opts):
-                    data = msg["data"]
+                    if msg["event"] == "thought":
+                        all_thoughts.append(msg["data"])
                     if msg["event"] == "done":
-                        data["trace_id"] = trace_id
-                        final_answer = data.get("answer", "")
-                    yield f"event: {msg['event']}\ndata: {json.dumps(data)}\n\n"
+                        msg["data"]["trace_id"] = trace_id
+                        final_answer = msg["data"].get("answer", "")
+                        last_citations = msg["data"].get("citations", [])
+                    yield f"event: {msg['event']}\ndata: {json.dumps(msg['data'])}\n\n"
         except asyncio.TimeoutError:
-            yield f"event: timeout\ndata: {json.dumps({'message': 'Request timed out', 'trace_id': trace_id})}\n\n"
-        if req.session_id:
-            await session_service.add_message(db, req.session_id, role="user", content=req.query)
-            if final_answer:
-                citations = []
+            timeout_body = json.dumps({"message": "Request timed out", "trace_id": trace_id})
+            yield f"event: timeout\ndata: {timeout_body}\n\n"
+
+        # Persist messages immediately after stream finishes
+        try:
+            if req.session_id and final_answer:
+                citations_out = []
                 try:
-                    citations = json.dumps(
-                        [{"chunk_id": c["chunk_id"], "document_title": c.get("document_title", ""),
-                          "text": c.get("text", ""), "relevance": c.get("relevance", 0)}
-                         for c in (data.get("citations") or [])[:20]]
-                    )
+                    citations_out = [
+                        {"chunk_id": c["chunk_id"], "document_title": c.get("document_title", ""),
+                         "text": c.get("text", ""), "relevance": c.get("relevance", 0)}
+                        for c in last_citations[:20]
+                    ]
                 except Exception:
-                    citations = "[]"
+                    pass
+                await session_service.add_message(db, req.session_id, role="user", content=req.query)
                 await session_service.add_message(
                     db, req.session_id, role="assistant",
                     content=final_answer, trace_id=trace_id,
-                    citations=json.loads(citations) if isinstance(citations, str) else citations
+                    citations=citations_out, thoughts=all_thoughts,
                 )
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+                await db.commit()
+        except Exception:
+            pass  # don't break SSE on persist failure
+
+    return StreamingResponse(
+        event_generator(), media_type="text/event-stream",
+    )
 
 @router.get("/{trace_id}/trace")
 async def get_trace(trace_id: str, db=Depends(get_db),

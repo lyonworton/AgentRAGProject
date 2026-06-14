@@ -53,11 +53,13 @@ async def get_history(
 
 async def add_message(
     db: AsyncSession, session_id: str, role: str, content: str,
-    trace_id: str | None = None, citations: dict | None = None, token_count: int | None = None,
+    trace_id: str | None = None, citations: dict | None = None,
+    thoughts: list[dict] | None = None, token_count: int | None = None,
 ) -> Message:
     msg = Message(
         session_id=session_id, role=role, content=content,
-        trace_id=trace_id, citations=citations, token_count=token_count,
+        trace_id=trace_id, citations=citations, thoughts=thoughts,
+        token_count=token_count,
     )
     db.add(msg)
     await db.flush()

@@ -41,6 +41,7 @@ class MessageResponse(BaseModel):
     content: str
     trace_id: str | None
     citations: list[dict] | dict | None
+    thoughts: list[dict] | None
     token_count: int | None
     created_at: str | None
 

@@ -11,4 +11,5 @@ class Message(Base, TimestampMixin):
     role: Mapped[str] = mapped_column(String(16))
     content: Mapped[str] = mapped_column(Text)
     citations: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    thoughts: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     token_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

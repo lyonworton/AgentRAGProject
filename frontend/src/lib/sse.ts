@@ -30,8 +30,16 @@ export async function fetchSSE(
   })
 
   if (!res.ok) {
+    // Parse error response for a friendly message
     const text = await res.text()
-    throw new Error(text || `HTTP ${res.status}`)
+    let msg: string
+    try {
+      const parsed = JSON.parse(text)
+      msg = parsed.detail || text
+    } catch {
+      msg = text || `HTTP ${res.status}`
+    }
+    throw new Error(msg)
   }
 
   const reader = res.body?.getReader()

@@ -11,6 +11,7 @@ interface ChatMessage {
   citations?: any[]
   traceId?: string
   latencyMs?: number
+  thoughts?: ThoughtItem[]
 }
 
 interface Citation {
@@ -59,6 +60,7 @@ export function useChatStream(
         content: m.content,
         citations: m.citations || undefined,
         traceId: m.trace_id || undefined,
+        thoughts: m.thoughts || undefined,
       }))
       setMessages(msgs)
       setCitations([])
@@ -103,7 +105,7 @@ export function useChatStream(
     const controller = new AbortController()
     abortRef.current = controller
 
-    // 45s client-side timeout
+    // 180s client-side timeout (matches backend timeout)
     const timeoutId = setTimeout(() => {
       controller.abort()
       setTimedOut(true)
@@ -115,12 +117,12 @@ export function useChatStream(
           i === prev.length - 1 ? { ...m, streaming: false, content: m.content || '(request timed out)' } : m,
         ),
       )
-    }, 50000)
+    }, 180000)
 
     try {
       await fetchSSE(
         '/api/v1/query/stream',
-        { query, collection_ids: [selectedCollectionId], session_id: sid, options: { timeout: 45 } },
+        { query, collection_ids: [selectedCollectionId], session_id: sid, options: { timeout: 180 } },
         {
           onStatus: (data: any) => setStatusBar(data.message),
           onThought: (data: any) => {
@@ -137,6 +139,8 @@ export function useChatStream(
             )
           },
           onDone: (data: any) => {
+            // 保留流式 thoughts 用于后续历史对比，同时存入消息
+            const savedThoughts = thoughts.length > 0 ? [...thoughts] : undefined
             setMessages(prev =>
               prev.map((m, i) => {
                 if (i === prev.length - 1 && m.role === 'assistant') {
@@ -147,6 +151,7 @@ export function useChatStream(
                     citations: data.citations,
                     traceId: data.trace_id,
                     latencyMs: data.latency_ms,
+                    thoughts: savedThoughts,
                   }
                 }
                 return m

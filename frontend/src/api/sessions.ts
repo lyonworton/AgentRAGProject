@@ -17,6 +17,7 @@ export interface Message {
   content: string
   trace_id: string | null
   citations: any | null
+  thoughts: any[] | null
   token_count: number | null
   created_at: string | null
 }

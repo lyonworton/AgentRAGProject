@@ -60,7 +60,8 @@ async def verifier_node(state: AgentState) -> AgentState:
     total = len(claims)
     verified_ratio = verified_count / total if total > 0 else 1.0
 
-    if verified_ratio < 0.5:
+    # 如果 unverified 超过 10%（即 verified 不到 90%），需要再查一轮
+    if verified_ratio < 0.9:
         state["need_supplement"] = True
         state["supplement_queries"] = [
             c.get("search_query", c["text"]) for c in claims

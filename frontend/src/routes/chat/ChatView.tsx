@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Send, StopCircle } from 'lucide-react'
+import { Send, StopCircle, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { StatusBar } from '@/components/chat/StatusBar'
@@ -29,29 +29,48 @@ interface Props {
   selectedCollectionId: string
 }
 
-function ThoughtBubble({ thought }: { thought: ThoughtItem }) {
+function CollapsibleThought({ thought }: { thought: ThoughtItem }) {
+  const [collapsed, setCollapsed] = useState(false)
+  const verifiedCount = thought.claims?.filter(c => c.status === 'verified').length ?? 0
+
   return (
-    <div className="flex justify-start my-1">
-      <div className="max-w-[85%] rounded-lg px-3 py-2 bg-muted/30 border border-muted text-xs text-muted-foreground">
+    <div className="max-w-[85%] rounded-lg border border-muted overflow-hidden">
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center gap-1.5 px-3 py-2 bg-muted/30 text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+      >
+        <ChevronDown
+          className={`h-3 w-3 transition-transform shrink-0 ${collapsed ? '' : 'rotate-180'}`}
+        />
         <span className="font-medium text-foreground/70">{thought.phase}</span>
-        <span className="mx-1">·</span>
-        <span>{thought.text}</span>
         {thought.score !== undefined && (
-          <span className="ml-1 text-blue-500">({(thought.score * 100).toFixed(0)}%)</span>
+          <span className="text-blue-500">({(thought.score * 100).toFixed(0)}%)</span>
         )}
-        {thought.claims && thought.claims.length > 0 && (
-          <div className="mt-1 space-y-0.5">
-            {thought.claims.map((c, i) => (
-              <div key={i} className="flex gap-1">
-                <span className={c.status === 'verified' ? 'text-green-500' : c.status === 'contradicted' ? 'text-red-500' : 'text-yellow-500'}>
-                  {c.status === 'verified' ? '✓' : c.status === 'contradicted' ? '✗' : '?'}
-                </span>
-                <span className="truncate">{c.text}</span>
-              </div>
-            ))}
-          </div>
+        {verifiedCount > 0 && (
+          <span className="text-green-500 ml-auto">{verifiedCount}/{thought.claims?.length ?? 0} verified</span>
         )}
-      </div>
+      </button>
+      {!collapsed && (
+        <div className="px-3 pb-2 pt-0 text-xs text-muted-foreground bg-muted/10">
+          <div className="pt-1">{thought.text}</div>
+          {thought.claims && thought.claims.length > 0 && (
+            <div className="mt-1.5 space-y-0.5">
+              {thought.claims.map((c, i) => (
+                <div key={i} className="flex gap-1.5">
+                  <span className={
+                    c.status === 'verified' ? 'text-green-500' :
+                    c.status === 'contradicted' ? 'text-red-500' :
+                    'text-yellow-500'
+                  }>
+                    {c.status === 'verified' ? '✓' : c.status === 'contradicted' ? '✗' : '?'}
+                  </span>
+                  <span className="truncate">{c.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -62,7 +81,7 @@ export function ChatView({ selectedCollectionId }: Props) {
     messages,
     isStreaming,
     statusBar,
-    thoughts,
+    thoughts: streamThoughts,
     citations,
     error,
     timedOut,
@@ -115,10 +134,22 @@ export function ChatView({ selectedCollectionId }: Props) {
                   {(m.latencyMs / 1000).toFixed(1)}s
                 </div>
               )}
+              {/* 流式时只显示 streamThoughts，done 后只显示持久化 thoughts，避免重复 */}
+              {m.role === 'assistant' && !m.streaming && m.thoughts && m.thoughts.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {m.thoughts.map((t, j) => (
+                    <CollapsibleThought key={`hist-${i}-${j}`} thought={t} />
+                  ))}
+                </div>
+              )}
+              {streamThoughts.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {streamThoughts.map((t, j) => (
+                    <CollapsibleThought key={`stream-${i}-${j}`} thought={t} />
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-          {thoughts.map((t, i) => (
-            <ThoughtBubble key={`thought-${i}`} thought={t} />
           ))}
           {error && (
             <div className="text-center">
