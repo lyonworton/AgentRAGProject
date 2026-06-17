@@ -38,12 +38,19 @@ class MilvusStore(BaseVectorStore):
         col.create_index("embedding", {"metric_type":"COSINE","index_type":"IVF_FLAT","params":{"nlist":128}})
         col.load()
 
-    async def insert(self, name, chunks, embeddings):
+    async def insert(self, name, chunks, embeddings, flush=False):
         col = Collection(name)
         rows = [{ "chunk_id":ch["chunk_id"],"document_id":ch["document_id"],"text":ch["text"],
             "embedding":embeddings[i],"metadata":ch.get("metadata",{}),
             "chunk_index":ch.get("chunk_index",0),"parent_chunk_id":ch.get("parent_chunk_id","")} for i,ch in enumerate(chunks)]
-        col.insert(rows); col.flush()
+        col.insert(rows)
+        if flush:
+            col.flush()
+
+    async def flush_collection(self, name: str) -> None:
+        """Explicitly flush a collection (call after batch insert)."""
+        col = Collection(name)
+        col.flush()
 
     async def search(self, name, qe, top_k=10):
         col = self._get_collection(name)
