@@ -72,11 +72,13 @@ class BGEEmbedding(BaseEmbedding):
             return model.encode(
                 texts,
                 normalize_embeddings=True,
-                batch_size=32,
+                batch_size=256,
                 show_progress_bar=False,
             )
 
-        result = await asyncio.wait_for(asyncio.to_thread(_encode), timeout=120.0)
+        # CPU-bound: run in thread pool to avoid blocking the event loop.
+        # 600s timeout: BGE-M3 on CPU is slow (~10s cold start + ~1s per 32 chunks).
+        result = await asyncio.wait_for(asyncio.to_thread(_encode), timeout=600.0)
         return result.tolist()
 
     async def aembed_query(self, query: str) -> list[float]:
@@ -89,7 +91,8 @@ class BGEEmbedding(BaseEmbedding):
             )
             return emb[0]
 
-        result = await asyncio.wait_for(asyncio.to_thread(_encode), timeout=120.0)
+        # Single query embedding is fast (<1s), but keep consistent timeout.
+        result = await asyncio.wait_for(asyncio.to_thread(_encode), timeout=60.0)
         return result.tolist()
 
     @classmethod
