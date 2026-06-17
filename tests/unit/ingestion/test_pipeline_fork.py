@@ -2,26 +2,27 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from app.ingestion.pipeline import (
     run_semantic_path, run_graph_path, run_keyword_path,
-    _compute_path_status,
+    _compute_path_status, batch_flush_milvus,
 )
 
 
 @pytest.mark.asyncio
 @patch("app.ingestion.pipeline.chunk_text")
 @patch("app.ingestion.pipeline.embed_chunks")
-@patch("app.ingestion.pipeline.write_chunks_to_milvus")
-async def test_run_semantic_path(mock_write, mock_embed, mock_chunk):
+async def test_run_semantic_path(mock_embed, mock_chunk):
     mock_chunk.return_value = [{"text": "chunk1", "metadata": {}}]
     mock_embed.return_value = [[0.1, 0.2]]
-    mock_write.return_value = 1
 
     doc = MagicMock()
     doc.content = "test content"
     doc.id = "doc_001"
     doc.source_path = "/tmp/test.txt"
 
-    count = await run_semantic_path(doc, "col_123", 1536)
-    assert count == 1
+    result = await run_semantic_path(doc, "col_123", 1536)
+    assert result["count"] == 1
+    assert result["doc_id"] == "doc_001"
+    assert len(result["chunks"]) == 1
+    assert len(result["embeddings"]) == 1
 
 
 @pytest.mark.asyncio
@@ -88,3 +89,23 @@ def test_compute_path_status_all_failed():
     results = [Exception("a"), Exception("b"), Exception("c")]
     status = _compute_path_status(results)
     assert status == {"milvus": "error", "neo4j": "error", "es": "error"}
+@pytest.mark.asyncio
+@patch("app.ingestion.pipeline.MilvusStore")
+async def test_batch_flush_milvus_writes_all_chunks(mock_store_cls):
+    """batch_flush_milvus should insert all chunks across docs in batches of 1000."""
+    mock_store = MagicMock()
+    mock_store.insert = AsyncMock()
+    mock_store_cls.return_value = mock_store
+
+    batch_data = [
+        {"doc_id": "d1", "chunks": [{"text": f"chunk{i}", "metadata": {}} for i in range(5)],
+         "embeddings": [[0.1] * 1024] * 5, "count": 5},
+        {"doc_id": "d2", "chunks": [{"text": f"chunk{i}", "metadata": {}} for i in range(5)],
+         "embeddings": [[0.2] * 1024] * 5, "count": 5},
+    ]
+
+    count = await batch_flush_milvus("col_test", batch_data)
+    assert count == 10
+    mock_store.insert.assert_called_once()
+    call_kwargs = mock_store.insert.call_args.kwargs
+    assert call_kwargs["flush"] is True
