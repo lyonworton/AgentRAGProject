@@ -5,15 +5,28 @@ from app.core.config import get_settings
 _embedder = None
 
 
+def _reset_singleton():
+    """Reset the embedding singleton (for testing)."""
+    global _embedder
+    _embedder = None
+
+
 def get_embedder():
-    """Return a local BGE-M3 embedding adapter (singleton)."""
+    """Return an embedding adapter based on EMBEDDING_BACKEND config."""
     global _embedder
     if _embedder is not None:
         return _embedder
 
-    from app.adapters.embedding.bge_m3 import BGEEmbedding
+    s = get_settings()
 
-    settings = get_settings()
-    model_path = settings.bge_embedding_model
-    _embedder = BGEEmbedding(model_path=model_path)
+    if s.embedding_backend == "xinference":
+        from app.adapters.embedding.xinference import XinferenceEmbedding
+        _embedder = XinferenceEmbedding(
+            endpoint=s.xinference_endpoint,
+            model=s.xinference_embedding_model,
+        )
+    else:
+        from app.adapters.embedding.bge_m3 import BGEEmbedding
+        _embedder = BGEEmbedding(model_path=s.bge_embedding_model)
+
     return _embedder
