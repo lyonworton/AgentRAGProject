@@ -92,6 +92,21 @@ services:
         condition: service_healthy
     command: arq app.workers.main.WorkerSettings
 
+  xinference:
+    image: xorbitsai/xinference:latest
+    ports: ["9997:9997"]
+    environment:
+      - XINFERENCE_HOME=/root/.xinference
+    volumes:
+      - xinference_models:/root/.xinference/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    restart: unless-stopped
+
   # === Phase 2 (Phase 5 enabled) ===
   neo4j:
     image: neo4j:5
@@ -134,3 +149,4 @@ volumes:
   minio_data:
   neo4jdata:
   esdata:
+  xinference_models:
