@@ -25,14 +25,24 @@ async def on_startup():
     except Exception as e:
         logger.warning("elasticsearch unavailable, keyword search disabled", error=str(e))
 
-    # Prewarm embedding model in a thread pool (doesn't block event loop)
+    # Prewarm embedding model
     try:
         from app.core.embedding_factory import get_embedder
         embedder = get_embedder()
-        await asyncio.to_thread(embedder._load_model)
-        logger.info("embedding model prewarmed")
+        if hasattr(embedder, "warmup"):
+            # Xinference: verify connectivity
+            warmup_success = await asyncio.wait_for(
+                embedder.warmup(),
+                timeout=15.0,
+            )
+        else:
+            # Local: load model into memory
+            await asyncio.to_thread(embedder._load_model)
+            warmup_success = True
+        if warmup_success:
+            logger.info("embedding model prewarmed")
     except Exception as e:
-        logger.warning("embedding model unavailable, vector search disabled", error=str(e))
+        logger.warning("embedding prewarm failed, will load lazily", error=str(e))
 
     # NOTE: BGE reranker model (BAAI/bge-reranker-v2-m3) is loaded lazily on first use.
     # Background prewarming was attempted but FlagReranker.__init__ hangs in a thread,
