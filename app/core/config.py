@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     max_iterations: int = 5
     quality_threshold: float = 0.7
 
+    # Xinference (GPU embedding)
+    embedding_backend: str = "local"       # "local" | "xinference"
+    xinference_endpoint: str = "http://xinference:9997"
+    xinference_embedding_model: str = "bge-m3"
+
     # Neo4j
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
