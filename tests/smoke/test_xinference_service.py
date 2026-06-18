@@ -12,6 +12,6 @@ async def test_xinference_endpoint_reachable():
     try:
         models = await asyncio.wait_for(client.models.list(), timeout=5.0)
         model_ids = [m.id for m in models.data]
-        assert "bge-m3" in model_ids or len(model_ids) >= 0  # service responded
+        assert len(model_ids) > 0, "Xinference should serve at least one model"
     except Exception:
         pytest.skip("xinference service not available (not running in docker)")

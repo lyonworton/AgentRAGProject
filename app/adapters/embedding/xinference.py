@@ -35,5 +35,6 @@ class XinferenceEmbedding(BaseEmbedding):
                 timeout=10.0,
             )
             return True
-        except (APITimeoutError, TimeoutError, Exception):
+        except (APITimeoutError, TimeoutError, Exception) as e:
+            logger.warning("xinference warmup failed", error=str(e))
             return False
