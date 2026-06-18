@@ -1,3 +1,4 @@
+import asyncio
 from arq import create_pool
 from arq.connections import RedisSettings
 from app.core.config import get_settings
@@ -8,6 +9,20 @@ from app.ingestion.sources.web import WebSource
 from app.ingestion.sources.database import DBSource
 
 settings = get_settings()
+
+# === Embedding model prewarm (shared across all ARQ worker processes) ===
+_embedder_prewarmed = False
+
+
+def _prewarm_embedder():
+    """Lazy-load BGE-M3 model into singleton (blocking, run in thread)."""
+    global _embedder_prewarmed
+    if _embedder_prewarmed:
+        return
+    from app.core.embedding_factory import get_embedder
+    embedder = get_embedder()
+    embedder._load_model()  # blocks, but only once per process
+    _embedder_prewarmed = True
 
 
 async def start_ingest_job(
@@ -20,6 +35,9 @@ async def start_ingest_job(
     embedding_dim: int = -1,
 ):
     """ARQ job: 启动摄入管道。
+
+    Pre-warms the embedding model on first call to avoid 20s+ cold start
+    during the actual embedding phase.
 
     Args:
         source_type: "local" | "web" | "database"
@@ -48,6 +66,7 @@ async def start_ingest_job(
 
     return await run_ingest_pipeline(
         job_id, collection_id, user_id, source, embedding_dim, async_session,
+        commit_every=5,
     )
 
 

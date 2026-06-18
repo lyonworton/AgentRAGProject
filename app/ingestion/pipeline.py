@@ -158,6 +158,7 @@ async def run_ingest_pipeline(
     source: BaseSource,
     embedding_dim: int = -1,
     db_session_factory=None,
+    commit_every: int = 5,
 ):
     """统一摄入管道：Source → Parse → PG写入 → 三路并行 Fork → 状态汇总。"""
     files = await source.list_files()
@@ -171,6 +172,7 @@ async def run_ingest_pipeline(
     errors_list = []
     doc_id = None
     semantic_batch_data: list[dict] = []
+    docs_since_commit = 0
 
     async with db_session_factory() as db:
         job = await db.get(IngestJob, job_id)
@@ -225,23 +227,33 @@ async def run_ingest_pipeline(
             else:
                 final_status = "error"
 
+            # Determine chunk_count from semantic_results[0] (which is a dict)
+            chunk_count = 0
+            if not isinstance(semantic_results[0], Exception) and "count" in semantic_results[0]:
+                chunk_count = semantic_results[0].get("count", 0)
+
+            docs_since_commit += 1
+            is_last_doc = (completed + failed) >= total
+            should_commit = (docs_since_commit >= commit_every) or is_last_doc or final_status == "error"
+
             async with db_session_factory() as db:
                 d = await db.get(Document, doc_id)
                 if d:
                     d.status = final_status
                     d.path_status = path_status
                     if final_status != "error":
-                        d.chunk_count = semantic_results[0].get("count", 0) if not isinstance(semantic_results[0], Exception) else 0
+                        d.chunk_count = chunk_count
                         d.embedding_model = get_settings().bge_embedding_model
                         d.ingested_at = datetime.now(timezone.utc)
                         # Update collection stats
                         col = await db.get(Collection, collection_id)
                         if col:
                             col.doc_count = (col.doc_count or 0) + 1
-                            col.chunk_count = (col.chunk_count or 0) + d.chunk_count
-                            await db.commit()
-                    else:
-                        d.error_message = str(semantic_results[0])
+                            col.chunk_count = (col.chunk_count or 0) + chunk_count
+                    if should_commit:
+                        await db.commit()
+                    elif final_status == "error":
+                        # Always commit errors for visibility
                         await db.commit()
 
             # Accumulate semantic data for batch flush

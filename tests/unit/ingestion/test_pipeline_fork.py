@@ -109,3 +109,11 @@ async def test_batch_flush_milvus_writes_all_chunks(mock_store_cls):
     mock_store.insert.assert_called_once()
     call_kwargs = mock_store.insert.call_args.kwargs
     assert call_kwargs["flush"] is True
+
+
+@pytest.mark.asyncio
+async def test_run_ingest_pipeline_accepts_commit_every():
+    """run_ingest_pipeline should accept commit_every parameter."""
+    from app.ingestion.pipeline import run_ingest_pipeline
+    params = run_ingest_pipeline.__code__.co_varnames
+    assert "commit_every" in params
