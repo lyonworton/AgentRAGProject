@@ -21,6 +21,10 @@ export function Ingestion() {
 
   // local
   const [files, setFiles] = useState<FileList | null>(null)
+  // File selection preview
+  const [selectedFiles, setSelectedFiles] = useState<{ name: string; size: number }[]>([])
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
+  const [totalSize, setTotalSize] = useState(0)
   // web
   const [urls, setUrls] = useState('')
   // database
@@ -35,7 +39,20 @@ export function Ingestion() {
     try {
       if (tab === 'local') {
         if (!files || files.length === 0) { setMsg('Please select files'); setSubmitting(false); return }
-        await ingestLocal(colId, Array.from(files))
+        const fileArray = Array.from(files)
+        const fd = new FormData()
+        fd.append('collection_id', colId)
+        fileArray.forEach(f => fd.append('files', f))
+        const token = localStorage.getItem('token')
+        setUploadProgress({ done: 1, total: fileArray.length })
+        const res = await fetch('/api/v1/ingest/local', {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: fd,
+        })
+        if (!res.ok) throw new Error(`Ingest failed: ${res.status}`)
+        await res.json()
+        setUploadProgress(null)
       } else if (tab === 'web') {
         const urlList = urls.split('\n').map(s => s.trim()).filter(Boolean)
         if (urlList.length === 0) { setMsg('Please enter at least one URL'); setSubmitting(false); return }
@@ -89,7 +106,32 @@ export function Ingestion() {
           {tab === 'local' && (
             <div className="space-y-2">
               <Label>Select Files</Label>
-              <Input type="file" multiple onChange={e => setFiles((e.target as HTMLInputElement).files)} />
+              <Input
+                type="file"
+                multiple
+                onChange={e => {
+                  const fileList = (e.target as HTMLInputElement).files
+                  setFiles(fileList)
+                  if (fileList) {
+                    const info = Array.from(fileList).map(f => ({ name: f.name, size: f.size }))
+                    setSelectedFiles(info)
+                    setTotalSize(info.reduce((sum, f) => sum + f.size, 0))
+                  }
+                }}
+              />
+              {selectedFiles.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  <p className="text-sm font-medium">
+                    {selectedFiles.length} file(s) selected
+                    {totalSize > 0 && ` -- ${(totalSize / 1024 / 1024).toFixed(2)} MB`}
+                  </p>
+                  <div className="max-h-32 overflow-y-auto space-y-0.5">
+                    {selectedFiles.map((f, i) => (
+                      <p key={i} className="text-xs text-muted-foreground truncate">{f.name} ({(f.size / 1024).toFixed(1)} KB)</p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {tab === 'web' && (
@@ -110,6 +152,12 @@ export function Ingestion() {
       </Card>
 
       {msg && <p className={`text-sm ${msg.includes('successfully') ? 'text-green-600' : 'text-destructive'}`}>{msg}</p>}
+
+      {uploadProgress && (
+        <div className="text-sm text-muted-foreground">
+          Uploading {uploadProgress.done}/{uploadProgress.total} file(s)...
+        </div>
+      )}
 
       <Button onClick={submit} disabled={submitting || !colId}>
         {submitting ? 'Submitting...' : 'Submit Ingestion Job'}
