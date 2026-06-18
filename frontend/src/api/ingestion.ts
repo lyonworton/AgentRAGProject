@@ -49,6 +49,44 @@ export function ingestLocal(colId: string, files: File[]): Promise<{ job_id: str
   })
 }
 
+export interface UploadProgressCallback {
+  (progress: { done: number; total: number; fileName: string }): void
+}
+
+export async function ingestLocalBatch(
+  colId: string,
+  files: File[],
+  onProgress?: UploadProgressCallback
+): Promise<{ job_id: string; arq_job_id: string; file_count: number }> {
+  const BATCH_SIZE = 5
+  const batches: File[][] = []
+  for (let i = 0; i < files.length; i += BATCH_SIZE) {
+    batches.push(files.slice(i, i + BATCH_SIZE))
+  }
+
+  let lastResult: { job_id: string; arq_job_id: string; file_count: number } | null = null
+
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i]
+    const fd = new FormData()
+    fd.append('collection_id', colId)
+    batch.forEach(f => fd.append('files', f))
+    const token = localStorage.getItem('token')
+
+    onProgress?.({ done: i + 1, total: batches.length, fileName: batch[batch.length - 1].name })
+
+    const res = await fetch('/api/v1/ingest/local', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    })
+    if (!res.ok) throw new Error(`Ingest batch ${i + 1}/${batches.length} failed: ${res.status}`)
+    lastResult = await res.json()
+  }
+
+  return lastResult!
+}
+
 export function ingestWeb(colId: string, urls: string[]): Promise<{ job_id: string; arq_job_id: string }> {
   return request('/ingest/web', {
     method: 'POST',

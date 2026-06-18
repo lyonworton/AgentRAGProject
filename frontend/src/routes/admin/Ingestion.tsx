@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCollections } from '@/hooks/useCollections'
-import { ingestLocal, ingestWeb, ingestDatabase } from '@/api/ingestion'
+import { ingestLocal, ingestLocalBatch, ingestWeb, ingestDatabase } from '@/api/ingestion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,19 +40,27 @@ export function Ingestion() {
       if (tab === 'local') {
         if (!files || files.length === 0) { setMsg('Please select files'); setSubmitting(false); return }
         const fileArray = Array.from(files)
-        const fd = new FormData()
-        fd.append('collection_id', colId)
-        fileArray.forEach(f => fd.append('files', f))
-        const token = localStorage.getItem('token')
-        setUploadProgress({ done: 1, total: fileArray.length })
-        const res = await fetch('/api/v1/ingest/local', {
-          method: 'POST',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body: fd,
-        })
-        if (!res.ok) throw new Error(`Ingest failed: ${res.status}`)
-        await res.json()
-        setUploadProgress(null)
+
+        // Use ingestLocalBatch for files > 5, otherwise use the direct fetch
+        if (fileArray.length > 5) {
+          await ingestLocalBatch(colId, fileArray, (progress) => {
+            setUploadProgress({ done: progress.done, total: progress.total })
+          })
+        } else {
+          const fd = new FormData()
+          fd.append('collection_id', colId)
+          fileArray.forEach(f => fd.append('files', f))
+          const token = localStorage.getItem('token')
+          setUploadProgress({ done: 1, total: fileArray.length })
+          const res = await fetch('/api/v1/ingest/local', {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: fd,
+          })
+          if (!res.ok) throw new Error(`Ingest failed: ${res.status}`)
+          await res.json()
+          setUploadProgress(null)
+        }
       } else if (tab === 'web') {
         const urlList = urls.split('\n').map(s => s.trim()).filter(Boolean)
         if (urlList.length === 0) { setMsg('Please enter at least one URL'); setSubmitting(false); return }
