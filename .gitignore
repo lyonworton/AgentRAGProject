@@ -5,3 +5,6 @@ __pycache__/
 .env
 .playwright-mcp/
 uploads/
+
+# ECC worktree clones (isolated git checkouts, not part of main workspace)
+.claude/worktrees/
