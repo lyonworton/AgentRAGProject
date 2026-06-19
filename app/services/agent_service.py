@@ -18,7 +18,7 @@ NODE_LABELS = {
     "understand": "Understanding query...",
     "route": "Routing to retrieval paths...",
     "execute": "Executing searches...",
-    "reflect": "Reflecting on completeness...",
+    "reflect": "Reflecting on answer quality...",
     "verify": "Verifying claims...",
     "synthesize": "Synthesizing answer...",
     "memory": "Saving to memory...",
@@ -281,12 +281,15 @@ class AgentService:
                         notes = accumulated.get("reflection_notes", "")
                         if draft and draft != last_thoughts.get("draft"):
                             last_thoughts["draft"] = draft
+                            # Store reflection info for merging with verification later
+                            accumulated["_reflection_notes"] = notes
+                            accumulated["_quality_score"] = accumulated.get("quality_score", 0)
                             thought = {"phase": "Draft", "text": draft[:500]}
                         elif notes and notes != last_thoughts.get("reflect"):
                             last_thoughts["reflect"] = notes
-                            score = accumulated.get("quality_score", 0)
-                            thought = {"phase": "Reflection", "text": notes[:500],
-                                       "score": score}
+                            accumulated["_reflection_notes"] = notes
+                            accumulated["_quality_score"] = accumulated.get("quality_score", 0)
+                            # Don't emit Reflection separately — it merges into Verification
                     elif node_name == "verify":
                         claims = accumulated.get("verified_claims", [])
                         if claims:
@@ -294,9 +297,22 @@ class AgentService:
                             if key != last_thoughts.get("verify"):
                                 last_thoughts["verify"] = key
                                 verified = sum(1 for c in claims if c.get("status") == "verified")
-                                thought = {"phase": "Verification",
-                                           "text": f"{verified}/{len(claims)} claims verified",
-                                           "claims": claims[:5]}
+                                # Merge reflection + verification into single bubble
+                                reflection_notes = accumulated.get("_reflection_notes", "")
+                                quality_score = accumulated.get("_quality_score", 0)
+
+                                # Build combined text
+                                parts = []
+                                if reflection_notes:
+                                    parts.append(reflection_notes[:300])
+                                parts.append(f"{verified}/{len(claims)} claims verified · quality {(quality_score * 100):.0f}%")
+
+                                thought = {
+                                    "phase": "Reflection & Verification",
+                                    "text": "\n".join(parts),
+                                    "score": quality_score,
+                                    "claims": claims[:10],
+                                }
                     elif node_name == "understand":
                         intent = accumulated.get("intent", "")
                         rewritten = accumulated.get("rewritten_query", "")

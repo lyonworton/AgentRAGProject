@@ -50,6 +50,7 @@ export function useChatStream(
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const streamingRef = useRef(false)  // guard against history wipe during streaming
+  const thoughtsRef = useRef<ThoughtItem[]>([])  // live reference for SSE callbacks (avoids stale closure)
 
   // Load history when session changes (skip while streaming to avoid race)
   useEffect(() => {
@@ -82,6 +83,7 @@ export function useChatStream(
     setError(null)
     setTimedOut(false)
     setThoughts([])
+    thoughtsRef.current = []
     setLatencyMs(null)
     streamingRef.current = true
 
@@ -126,7 +128,11 @@ export function useChatStream(
         {
           onStatus: (data: any) => setStatusBar(data.message),
           onThought: (data: any) => {
-            setThoughts(prev => [...prev, data])
+            setThoughts(prev => {
+              const updated = [...prev, data]
+              thoughtsRef.current = updated
+              return updated
+            })
           },
           onChunk: (data: any) => {
             setMessages(prev =>
@@ -139,8 +145,12 @@ export function useChatStream(
             )
           },
           onDone: (data: any) => {
-            // 保留流式 thoughts 用于后续历史对比，同时存入消息
-            const savedThoughts = thoughts.length > 0 ? [...thoughts] : undefined
+            // Persist stream thoughts into the message, then clear the global streamThoughts
+            // to prevent duplicate rendering (saved thoughts + stream thoughts would both show).
+            // Use thoughtsRef.current instead of thoughts closure to avoid stale state.
+            const savedThoughts = thoughtsRef.current.length > 0 ? [...thoughtsRef.current] : undefined
+            setThoughts([])
+            thoughtsRef.current = []
             setMessages(prev =>
               prev.map((m, i) => {
                 if (i === prev.length - 1 && m.role === 'assistant') {
@@ -165,6 +175,7 @@ export function useChatStream(
             streamingRef.current = false
           },
           onTimeout: (data: any) => {
+            setThoughts([])
             setMessages(prev =>
               prev.map((m, i) => {
                 if (i === prev.length - 1 && m.role === 'assistant') {

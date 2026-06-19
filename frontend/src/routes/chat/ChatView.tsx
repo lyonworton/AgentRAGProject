@@ -32,6 +32,18 @@ interface Props {
 function CollapsibleThought({ thought }: { thought: ThoughtItem }) {
   const [collapsed, setCollapsed] = useState(false)
   const verifiedCount = thought.claims?.filter(c => c.status === 'verified').length ?? 0
+  const contradictedCount = thought.claims?.filter(c => c.status === 'contradicted').length ?? 0
+
+  // Phase label: show score for Reflection, show verified/contradicted counts for Verification
+  let badge = ''
+  if (thought.score !== undefined) {
+    badge = `(${(thought.score * 100).toFixed(0)}%)`
+  }
+  if (verifiedCount > 0 || contradictedCount > 0) {
+    const counts = [`✓${verifiedCount}`]
+    if (contradictedCount > 0) counts.push(`✗${contradictedCount}`)
+    badge = counts.join('/') + (thought.score !== undefined ? ` · ${badge}` : '')
+  }
 
   return (
     <div className="max-w-[85%] rounded-lg border border-muted overflow-hidden">
@@ -43,12 +55,7 @@ function CollapsibleThought({ thought }: { thought: ThoughtItem }) {
           className={`h-3 w-3 transition-transform shrink-0 ${collapsed ? '' : 'rotate-180'}`}
         />
         <span className="font-medium text-foreground/70">{thought.phase}</span>
-        {thought.score !== undefined && (
-          <span className="text-blue-500">({(thought.score * 100).toFixed(0)}%)</span>
-        )}
-        {verifiedCount > 0 && (
-          <span className="text-green-500 ml-auto">{verifiedCount}/{thought.claims?.length ?? 0} verified</span>
-        )}
+        {badge && <span className="text-green-500 ml-auto">{badge}</span>}
       </button>
       {!collapsed && (
         <div className="px-3 pb-2 pt-0 text-xs text-muted-foreground bg-muted/10">
@@ -134,18 +141,18 @@ export function ChatView({ selectedCollectionId }: Props) {
                   {(m.latencyMs / 1000).toFixed(1)}s
                 </div>
               )}
-              {/* 流式时只显示 streamThoughts，done 后只显示持久化 thoughts，避免重复 */}
+              {/* 流式时显示实时 streamThoughts，done 后显示持久化 thoughts，二者互斥 */}
+              {m.role === 'assistant' && m.streaming && streamThoughts.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {streamThoughts.map((t, j) => (
+                    <CollapsibleThought key={`stream-${i}-${j}`} thought={t} />
+                  ))}
+                </div>
+              )}
               {m.role === 'assistant' && !m.streaming && m.thoughts && m.thoughts.length > 0 && (
                 <div className="flex flex-col gap-1">
                   {m.thoughts.map((t, j) => (
                     <CollapsibleThought key={`hist-${i}-${j}`} thought={t} />
-                  ))}
-                </div>
-              )}
-              {streamThoughts.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  {streamThoughts.map((t, j) => (
-                    <CollapsibleThought key={`stream-${i}-${j}`} thought={t} />
                   ))}
                 </div>
               )}

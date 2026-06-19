@@ -61,9 +61,7 @@ async def memory_node(state: AgentState) -> AgentState:
 async def should_continue(state: AgentState) -> str:
     if state["iteration"] >= state["max_iterations"]:
         return "synthesize"
-    # 高质量直接跳过 verify，省掉 ~5s
-    if state["quality_score"] >= 0.85:
-        return "synthesize"
+    # Always run verifier when score >= 0.7 to show verification process
     if state["quality_score"] >= 0.7:
         return "verify"
     if state.get("prev_score") is not None and state["quality_score"] <= state["prev_score"]:
