@@ -64,6 +64,9 @@ async def start_ingest_job(
     else:
         raise ValueError(f"Unknown source_type: {source_type}")
 
+    # Pre-warm embedding model on every worker process start (avoids cold start)
+    _prewarm_embedder()
+
     return await run_ingest_pipeline(
         job_id, collection_id, user_id, source, embedding_dim, async_session,
         commit_every=5,

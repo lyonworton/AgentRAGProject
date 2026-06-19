@@ -233,7 +233,7 @@ async def run_ingest_pipeline(
                 chunk_count = semantic_results[0].get("count", 0)
 
             docs_since_commit += 1
-            is_last_doc = (completed + failed) >= total
+            is_last_doc = (completed + failed + 1) >= total
             should_commit = (docs_since_commit >= commit_every) or is_last_doc or final_status == "error"
 
             async with db_session_factory() as db:
@@ -277,10 +277,11 @@ async def run_ingest_pipeline(
                         d.error_message = str(e)
                         await db.commit()
 
-    # Batch flush all semantic path data
+    # === Batch flush remaining semantic data to Milvus ===
     if semantic_batch_data:
         try:
             flushed = await batch_flush_milvus(col_name, semantic_batch_data)
+            logger.info("milvus_batch_flushed", total=flushed)
         except Exception as e:
             import structlog
             logger = structlog.get_logger()

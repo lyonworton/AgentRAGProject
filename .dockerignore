@@ -1,0 +1,39 @@
+# ECC worktree clones (isolated git checkouts)
+.claude/worktrees/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+*.egg
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Docs and misc
+docs/
+tests/
+*.md
+CLAUDE.md
+.sdd/
+
+# Uploads and local data
+uploads/
+.playwright-mcp/
+
+# Git
+.git/
