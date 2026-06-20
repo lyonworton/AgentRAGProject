@@ -113,8 +113,8 @@ export function ChatView({ selectedCollectionId }: Props) {
   }
 
   return (
-    <div className="flex-1 flex">
-      <div className="flex-1 flex flex-col min-w-0">
+    <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0">
         <div className="flex-1 overflow-auto p-4 space-y-4">
           {!sessionId && messages.length === 0 && (
             <div className="flex items-center justify-center h-full text-muted-foreground text-sm">

@@ -1,7 +1,10 @@
 import json
 import time
+import structlog
 from app.agents.state import AgentState
 from app.core.llm_factory import get_llm
+
+logger = structlog.get_logger()
 
 SYNTHESIZE_PROMPT = """Synthesize a final answer from the retrieved chunks. Follow these rules STRICTLY:
 
@@ -21,6 +24,8 @@ Retrieved chunks:
 
 
 async def synthesize_node(state: AgentState) -> AgentState:
+    logger.info("synthesize_node_start", quality_score=state.get("quality_score", 0),
+                has_draft=bool(state.get("draft_answer")), retrieved=len(state.get("retrieved", [])))
     llm = get_llm()
     chunks_text = "\n\n".join(
         f"CHUNK [{r.get('chunk_id', '?')}] (from {r.get('document_id', '?')}, score={r.get('score', 0):.3f}):\n{r.get('text', '')}"

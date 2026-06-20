@@ -74,11 +74,6 @@ async def should_continue(state: AgentState) -> str:
     prev_retrieved_ids = set(state.get("_prev_retrieved_ids", []))
     if prev_retrieved_ids and retrieved_ids == prev_retrieved_ids:
         return "synthesize"
-    # Always run verifier when score >= 0.7 to show verification process
-    if state["quality_score"] >= 0.7:
-        return "verify"
-    if state.get("prev_score") is not None and state["quality_score"] <= state["prev_score"]:
-        return "verify"
     # Empty results after execution → no point looping
     retrieved = state.get("retrieved")
     if retrieved is not None and not retrieved:
@@ -86,15 +81,24 @@ async def should_continue(state: AgentState) -> str:
     # 已查到足够多 chunks 但 quality 仍低 → 大概率是缺角度而非缺内容，不再循环
     if len(retrieved) >= 40 and state["iteration"] >= 1:
         return "synthesize"
-    state["iteration"] += 1
-    state["prev_score"] = state["quality_score"]
-    # Save current retrieved IDs for next round's no-improvement check
-    state["_prev_retrieved_ids"] = list(retrieved_ids)
+    # Note: iteration is incremented in reflector_node, not here.
+    # should_continue is a conditional-edge function — its state mutations
+    # are NOT persisted by LangGraph checkpointing.
+    # Always run verifier when score >= 0.7 to show verification process
+    if state["quality_score"] >= 0.7:
+        return "verify"
+    if state.get("prev_score") is not None and state["quality_score"] <= state["prev_score"]:
+        return "verify"
     return "route"
 
 
 async def should_verify(state: AgentState) -> str:
     if state.get("need_supplement"):
+        # If reflect already rated quality high enough, skip supplemental search
+        if state.get("quality_score", 0) >= 0.9:
+            logger.info("should_verify: skipping supplement, quality_sufficient",
+                        quality_score=state["quality_score"])
+            return "synthesize"
         return "route"
     return "synthesize"
 

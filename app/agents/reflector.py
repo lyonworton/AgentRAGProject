@@ -1,6 +1,10 @@
 import json
+import time
+import structlog
 from app.agents.state import AgentState, RetrievedChunk
 from app.core.llm_factory import get_llm
+
+logger = structlog.get_logger()
 
 REFLECT_DRAFT_PROMPT = """You are a helpful assistant and a strict quality reviewer combined.
 
@@ -26,12 +30,14 @@ Output ONLY JSON:
 
 
 async def reflector_node(state: AgentState) -> AgentState:
+    logger.info("reflect_node_start", retrieved=len(state.get("retrieved", [])))
     llm = get_llm()
     chunks_text = "\n".join(
         f"[{r.get('chunk_id', '?')}] {r.get('text', '')[:500]}" for r in state.get("retrieved", [])
     )
 
     # Single LLM call: draft + self-rate
+    t0 = time.monotonic()
     result = await llm.agenerate_structured(
         REFLECT_DRAFT_PROMPT.format(query=state["query"], chunks=chunks_text),
         "You are a helpful assistant and a strict quality reviewer.",
@@ -42,10 +48,15 @@ async def reflector_node(state: AgentState) -> AgentState:
             "quality_score": {"type": "number"}
         }, "required": ["draft_answer", "reflection_notes", "missing_info", "quality_score"]}
     )
+    logger.info("reflect_node_llm_done", elapsed_sec=round(time.monotonic() - t0, 2),
+                 quality_score=result.get("quality_score", 0), draft_len=len(result.get("draft_answer", "")))
 
     state["draft_answer"] = result.get("draft_answer", "")
     state["reflection_notes"] = result.get("reflection_notes", "")
     state["missing_info"] = result.get("missing_info", [])
     state["quality_score"] = result.get("quality_score", 0.0)
     state["need_another_round"] = state["quality_score"] < 0.7
+    # Increment iteration here — should_continue (a conditional edge function)
+    # cannot persist state mutations, so we must do it in a node function.
+    state["iteration"] = state.get("iteration", 0) + 1
     return state

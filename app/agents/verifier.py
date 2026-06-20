@@ -1,6 +1,10 @@
 import json
+import time
+import structlog
 from app.agents.state import AgentState, VerifiedClaim
 from app.core.llm_factory import get_llm
+
+logger = structlog.get_logger()
 
 VERIFY_PROMPT = """Verify whether each claim in the draft answer is supported by the retrieved chunks.
 
@@ -25,6 +29,7 @@ Output ONLY JSON:
 
 
 async def verifier_node(state: AgentState) -> AgentState:
+    logger.info("verify_node_start", draft_len=len(state.get("draft_answer", "")), retrieved=len(state.get("retrieved", [])))
     llm = get_llm()
     draft = state.get("draft_answer", "")
     chunks_text = "\n".join(
@@ -32,10 +37,12 @@ async def verifier_node(state: AgentState) -> AgentState:
     )
 
     if not draft.strip() or not chunks_text.strip():
+        logger.info("verify_node_skip", reason="empty_draft_or_chunks")
         state["verified_claims"] = []
         state["need_supplement"] = False
         return state
 
+    t0 = time.monotonic()
     result = await llm.agenerate_structured(
         VERIFY_PROMPT.format(draft=draft, chunks=chunks_text),
         "You are a fact verification specialist.",
@@ -48,6 +55,7 @@ async def verifier_node(state: AgentState) -> AgentState:
             }}}
         }}
     )
+    logger.info("verify_node_llm_done", elapsed_sec=round(time.monotonic() - t0, 2), claims=len(result.get("claims", [])))
 
     claims: list[VerifiedClaim] = [
         {"text": c["text"], "status": c["status"],
