@@ -12,7 +12,7 @@ def _make_state(query="What is RAG?", history=None):
         "need_another_round": False, "draft_answer": "", "verified_claims": [],
         "supplement_queries": [], "need_supplement": False, "final_answer": "",
         "citations": [], "uncertainty_flags": [], "warnings": [],
-        "bare_minimum_mode": False, "iteration": 0, "max_iterations": 5,
+        "bare_minimum_mode": False, "iteration": 0, "max_iterations": 2,
         "prev_score": None, "collection_ids": [],
     }
 

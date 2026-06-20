@@ -14,7 +14,7 @@ def _make_state(query="test", retrieved=None):
         "need_another_round": False, "draft_answer": "", "verified_claims": [],
         "supplement_queries": [], "need_supplement": False, "final_answer": "",
         "citations": [], "uncertainty_flags": [], "warnings": [],
-        "bare_minimum_mode": False, "iteration": 0, "max_iterations": 5,
+        "bare_minimum_mode": False, "iteration": 0, "max_iterations": 2,
         "prev_score": None, "collection_ids": [],
     }
 
@@ -24,6 +24,7 @@ class TestReflectorNode:
         mock_llm = AsyncMock()
         mock_llm.agenerate.return_value = "RAG combines retrieval with generation."
         mock_llm.agenerate_structured.return_value = {
+            "draft_answer": "RAG combines retrieval with generation.",
             "reflection_notes": "Good coverage", "missing_info": [], "quality_score": 0.85,
         }
         with patch("app.agents.reflector.get_llm", return_value=mock_llm):

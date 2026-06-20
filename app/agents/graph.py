@@ -1,3 +1,4 @@
+import structlog
 from langgraph.graph import StateGraph, END, START
 from app.agents.state import AgentState
 from app.agents.understander import understand_node
@@ -6,6 +7,8 @@ from app.agents.executor import executor_node
 from app.agents.reflector import reflector_node
 from app.agents.verifier import verifier_node
 from app.agents.nodes import synthesize_node
+
+logger = structlog.get_logger()
 
 async def memory_node(state: AgentState) -> AgentState:
     """Persist conversation context to Redis short-term memory."""
@@ -59,7 +62,17 @@ async def memory_node(state: AgentState) -> AgentState:
 
 
 async def should_continue(state: AgentState) -> str:
+    logger.info("should_continue", iteration=state["iteration"], max_iterations=state["max_iterations"],
+                quality_score=state["quality_score"], sub_tasks=len(state.get("sub_tasks", [])),
+                retrieved=len(state.get("retrieved", [])), prev_score=state.get("prev_score"),
+                intent=state.get("intent", ""))
     if state["iteration"] >= state["max_iterations"]:
+        logger.info("should_continue: max_iterations_reached")
+        return "synthesize"
+    # No improvement: retrieved chunk IDs unchanged from last round → stop looping
+    retrieved_ids = {r.get("chunk_id") for r in state.get("retrieved", [])}
+    prev_retrieved_ids = set(state.get("_prev_retrieved_ids", []))
+    if prev_retrieved_ids and retrieved_ids == prev_retrieved_ids:
         return "synthesize"
     # Always run verifier when score >= 0.7 to show verification process
     if state["quality_score"] >= 0.7:
@@ -75,6 +88,8 @@ async def should_continue(state: AgentState) -> str:
         return "synthesize"
     state["iteration"] += 1
     state["prev_score"] = state["quality_score"]
+    # Save current retrieved IDs for next round's no-improvement check
+    state["_prev_retrieved_ids"] = list(retrieved_ids)
     return "route"
 
 
@@ -99,6 +114,8 @@ def build_graph() -> StateGraph:
     graph.add_edge("understand", "route")
     graph.add_edge("route", "execute")
     graph.add_edge("execute", "reflect")
+
+    logger.info("graph_built", nodes=graph.nodes.keys() if hasattr(graph, 'nodes') else "compiled")
 
     graph.add_conditional_edges("reflect", should_continue, {
         "route": "route",

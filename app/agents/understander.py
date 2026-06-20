@@ -1,6 +1,9 @@
 import json
+import structlog
 from app.agents.state import AgentState
 from app.core.llm_factory import get_llm
+
+logger = structlog.get_logger()
 
 UNDERSTAND_PROMPT = """Analyze the user's query, conversation history, and session memory context. You are a query understanding specialist.
 
@@ -43,6 +46,7 @@ async def understand_node(state: AgentState) -> AgentState:
         f"\nHistory: {json.dumps(state.get('conversation_history', []))}"
         f"{memory_block}"
     )
+    logger.info("understand_node_start", query=state.get("query", "")[:100], memory_context=bool(mc))
     result = await llm.agenerate_structured(prompt, "You are a query analysis expert.", {
         "type": "object", "properties": {
             "intent": {"type": "string", "enum": ["fact", "relation", "comparison", "reasoning", "exact"]},
@@ -65,4 +69,5 @@ async def understand_node(state: AgentState) -> AgentState:
         for t in result["sub_tasks"]
     ]
     state["route_suggestions"] = result.get("route_suggestions", [])
+    logger.info("understand_node_done", intent=state["intent"], sub_tasks=len(state["sub_tasks"]))
     return state

@@ -12,7 +12,7 @@ from app.services import session_service
 router = APIRouter(prefix="/query", tags=["queries"])
 
 class QueryOptions(BaseModel):
-    max_iterations: int = 5
+    max_iterations: int = 2
     quality_threshold: float = 0.7
     enable_web_search: bool = False
     response_style: str = "concise"

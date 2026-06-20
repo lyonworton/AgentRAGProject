@@ -15,13 +15,15 @@ _embedder_prewarmed = False
 
 
 def _prewarm_embedder():
-    """Lazy-load BGE-M3 model into singleton (blocking, run in thread)."""
+    """Pre-warm embedding model into singleton (blocking, run in thread)."""
     global _embedder_prewarmed
     if _embedder_prewarmed:
         return
     from app.core.embedding_factory import get_embedder
     embedder = get_embedder()
-    embedder._load_model()  # blocks, but only once per process
+    # XinferenceEmbedding has no _load_model (uses remote API); only local embedders need it
+    if hasattr(embedder, "_load_model"):
+        embedder._load_model()  # blocks, but only once per process
     _embedder_prewarmed = True
 
 

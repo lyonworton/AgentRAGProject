@@ -25,11 +25,10 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"
     max_upload_size_mb: int = 100
     max_query_tokens: int = 32000
-    max_iterations: int = 5
+    max_iterations: int = 2
     quality_threshold: float = 0.7
 
     # Xinference (GPU embedding)
-    embedding_backend: str = "local"       # "local" | "xinference"
     xinference_endpoint: str = "http://xinference:9997"
     xinference_embedding_model: str = "bge-m3"
 

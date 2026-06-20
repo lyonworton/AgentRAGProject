@@ -1,4 +1,4 @@
-"""Test embedding_factory routes to correct backend."""
+"""Test embedding_factory always returns XinferenceEmbedding."""
 
 import os
 import pytest
@@ -17,28 +17,13 @@ def clean_singleton():
 def clean_env():
     """Clean up env vars after each test."""
     yield
-    if "EMBEDDING_BACKEND" in os.environ:
-        del os.environ["EMBEDDING_BACKEND"]
+    for key in ["XINFERENCE_ENDPOINT", "XINFERENCE_EMBEDDING_MODEL"]:
+        if key in os.environ:
+            del os.environ[key]
 
 
-def test_default_returns_local_bge():
-    """Without EMBEDDING_BACKEND set, should return BGEEmbedding (local)."""
-    embedder = get_embedder()
-    assert type(embedder).__name__ == "BGEEmbedding"
-
-
-def test_xinference_backend_returns_xinference_adapter():
-    """With EMBEDDING_BACKEND=xinference, should return XinferenceEmbedding."""
-    os.environ["EMBEDDING_BACKEND"] = "xinference"
-    # Need fresh settings - create a new Settings instance
-    from app.core.config import get_settings
-    get_settings.cache_clear()
-
-    _reset_singleton()
+def test_always_returns_xinference_adapter():
+    """Always returns XinferenceEmbedding (no local fallback)."""
     embedder = get_embedder()
     assert type(embedder).__name__ == "XinferenceEmbedding"
     assert embedder.model == "bge-m3"
-
-    # Restore for other tests
-    get_settings.cache_clear()
-    _reset_singleton()

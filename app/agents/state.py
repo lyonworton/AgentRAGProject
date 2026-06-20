@@ -66,3 +66,4 @@ class AgentState(TypedDict, total=False):
     routing_metrics: RoutingMetrics | None
     memory_context: dict | None
     route_suggestions: list[dict]
+    _prev_retrieved_ids: list[str]  # chunk IDs from previous round, for no-improvement detection

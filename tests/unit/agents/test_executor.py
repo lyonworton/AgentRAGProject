@@ -67,7 +67,7 @@ def _make_state(sub_tasks=None, routes=None, collection_ids=None):
         "reflection_notes": "", "missing_info": [], "quality_score": 0.0, "need_another_round": False,
         "draft_answer": "", "verified_claims": [], "supplement_queries": [], "need_supplement": False,
         "final_answer": "", "citations": [], "uncertainty_flags": [], "warnings": [], "bare_minimum_mode": False,
-        "iteration": 0, "max_iterations": 5, "prev_score": None, "collection_ids": collection_ids or ["col1"],
+        "iteration": 0, "max_iterations": 2, "prev_score": None, "collection_ids": collection_ids or ["col1"],
         "routing_metrics": None,
     }
     return state

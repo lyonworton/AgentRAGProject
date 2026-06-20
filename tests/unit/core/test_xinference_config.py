@@ -7,11 +7,6 @@ import pytest
 from app.core.config import Settings
 
 
-def test_default_embedding_backend_is_local():
-    s = Settings()
-    assert s.embedding_backend == "local"
-
-
 def test_default_xinference_endpoint():
     s = Settings()
     assert s.xinference_endpoint == "http://xinference:9997"
@@ -22,10 +17,10 @@ def test_default_xinference_model():
     assert s.xinference_embedding_model == "bge-m3"
 
 
-def test_env_override_embedding_backend():
-    os.environ["EMBEDDING_BACKEND"] = "xinference"
+def test_env_override_xinference_endpoint():
+    os.environ["XINFERENCE_ENDPOINT"] = "http://custom:9997"
     try:
         s = Settings()
-        assert s.embedding_backend == "xinference"
+        assert s.xinference_endpoint == "http://custom:9997"
     finally:
-        del os.environ["EMBEDDING_BACKEND"]
+        del os.environ["XINFERENCE_ENDPOINT"]

@@ -1,6 +1,9 @@
 import asyncio
+import structlog
 from app.agents.state import AgentState, RetrievedChunk
 from app.tools import get_tool_registry
+
+logger = structlog.get_logger()
 
 
 def _resolve_groups(sub_tasks: list[dict]) -> list[list[str]]:
@@ -70,12 +73,14 @@ async def executor_node(state: AgentState) -> AgentState:
     routes = state.get("routes", {})
     collection_ids = state.get("collection_ids", [])
 
+    logger.info("executor_node", sub_tasks=len(sub_tasks), routes=list(routes.keys()), collection_ids=collection_ids)
     state["raw_milvus_hits"] = []
     state["raw_kg_results"] = []
     state["raw_keyword_hits"] = []
     warnings: list[str] = []
 
     if not sub_tasks:
+        logger.warning("executor_no_sub_tasks", query=state.get("query", "")[:100])
         state["retrieved"] = []
         state["warnings"] = warnings
         return state
@@ -149,4 +154,5 @@ async def executor_node(state: AgentState) -> AgentState:
     state["raw_kg_results"] = [h for h in all_hits if h["_tool"] == "kg_search"]
     state["raw_keyword_hits"] = [h for h in all_hits if h["_tool"] == "keyword_search"]
     state.setdefault("warnings", []).extend(warnings)
+    logger.info("executor_done", retrieved=len(retrieved), warnings=len(warnings))
     return state

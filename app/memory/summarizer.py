@@ -12,7 +12,7 @@ Previous summary: {old_summary}
 
 New exchange:
 Q: {query}
-A: {answer[:800]}
+A: {answer_trunc}
 
 Output ONLY the merged summary text (2-5 sentences). No JSON, no explanation."""
 
@@ -34,7 +34,7 @@ async def progressive_summarize(
         prompt = SUMMARIZE_PROMPT.format(
             old_summary=old_summary or "(no previous summary)",
             query=query[:300],
-            answer=answer,
+            answer_trunc=answer[:800],
         )
         new_summary = await llm.agenerate(prompt, "You are a conversation summarizer.", max_tokens=200)
         return new_summary.strip() if new_summary else old_summary or answer[:500]

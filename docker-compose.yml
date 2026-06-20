@@ -110,7 +110,7 @@ services:
     environment:
       - XINFERENCE_HOME=/root/.xinference
     volumes:
-      - xinference_models:/root/.xinference/models
+      - xinference_models:/root/.xinference/models/cache
     deploy:
       resources:
         reservations:

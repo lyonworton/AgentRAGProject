@@ -25,20 +25,14 @@ async def on_startup():
     except Exception as e:
         logger.warning("elasticsearch unavailable, keyword search disabled", error=str(e))
 
-    # Prewarm embedding model
+    # Prewarm embedding model (Xinference GPU)
     try:
         from app.core.embedding_factory import get_embedder
         embedder = get_embedder()
-        if hasattr(embedder, "warmup"):
-            # Xinference: verify connectivity
-            warmup_success = await asyncio.wait_for(
-                embedder.warmup(),
-                timeout=15.0,
-            )
-        else:
-            # Local: load model into memory
-            await asyncio.to_thread(embedder._load_model)
-            warmup_success = True
+        warmup_success = await asyncio.wait_for(
+            embedder.warmup(),
+            timeout=15.0,
+        )
         if warmup_success:
             logger.info("embedding model prewarmed")
     except Exception as e:
