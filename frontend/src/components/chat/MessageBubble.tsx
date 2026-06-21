@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { type ReactNode } from 'react'
 
 interface Citation {
   document_title?: string
@@ -33,7 +34,7 @@ export function MessageBubble({ role, content, isStreaming, citations, traceId, 
           return (
             <span
               key={i}
-              className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/12 text-primary text-[11px] font-semibold cursor-pointer hover:bg-primary/20 transition-colors align-middle mx-0.5"
+              className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold cursor-pointer hover:bg-primary/20 transition-colors align-middle mx-0.5 px-0.5"
               onClick={() => onCitationClick?.(cite)}
               title={cite.document_title || cite.title || `Citation ${idx + 1}`}
             >
@@ -50,14 +51,16 @@ export function MessageBubble({ role, content, isStreaming, citations, traceId, 
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+          'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
           isUser
-            ? 'bg-primary text-primary-foreground shadow-sm'
-            : 'bg-card border border-border/60 shadow-card'
+            ? 'bg-primary text-primary-foreground shadow-sm rounded-br-sm'
+            : 'bg-card border border-border/50 shadow-card rounded-sm'
         )}
       >
         <div className="whitespace-pre-wrap">{renderContent(content)}</div>
-        {isStreaming && <span className="inline-block w-1.5 h-4 ml-0.5 rounded-sm bg-primary/60 animate-pulse align-text-bottom" />}
+        {isStreaming && (
+          <span className="inline-block w-1.5 h-4 ml-0.5 rounded-sm bg-primary/50 animate-pulse align-text-bottom" />
+        )}
       </div>
     </div>
   )

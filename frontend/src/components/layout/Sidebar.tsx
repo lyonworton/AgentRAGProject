@@ -28,11 +28,11 @@ export function Sidebar({ mobileOpen, onToggleMobile }: SidebarProps) {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
-      "hover:bg-accent/60",
+      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150",
+      "hover:bg-accent/50",
       isActive
-        ? "bg-primary/90 text-primary-foreground shadow-sm"
-        : "text-muted-foreground/80 hover:text-foreground"
+        ? "bg-primary/90 text-primary-foreground shadow-sm font-medium hover:bg-primary/90"
+        : "text-muted-foreground/70 hover:text-foreground font-medium"
     );
 
   const NavLinks = () => (
@@ -45,24 +45,24 @@ export function Sidebar({ mobileOpen, onToggleMobile }: SidebarProps) {
           className={linkClass}
           onClick={close}
         >
-          <Icon className="h-4 w-4 shrink-0" />
+          <Icon className="h-4 w-4 shrink-0" strokeWidth={1.8} />
           {label}
         </NavLink>
       ))}
 
       <CollapsibleSection title="Ingestion">
         <NavLink to="/admin/ingestion" className={linkClass} onClick={close}>
-          <Upload className="h-4 w-4" />
+          <Upload className="h-4 w-4" strokeWidth={1.8} />
           Ingestion
         </NavLink>
         <NavLink to="/admin/ingestion/jobs" className={linkClass} onClick={close}>
-          <ListTodo className="h-4 w-4" />
+          <ListTodo className="h-4 w-4" strokeWidth={1.8} />
           Jobs
         </NavLink>
       </CollapsibleSection>
 
       <NavLink to="/chat" className={linkClass} onClick={close}>
-        <MessageSquare className="h-4 w-4" />
+        <MessageSquare className="h-4 w-4" strokeWidth={1.8} />
         Chat
       </NavLink>
     </nav>
@@ -75,7 +75,7 @@ export function Sidebar({ mobileOpen, onToggleMobile }: SidebarProps) {
         <NavLinks />
       </MobileSidebarShell>
 
-      <aside className="hidden md:flex flex-col fixed top-0 left-0 h-full w-64 bg-card border-r border-border/50 shadow-sm">
+      <aside className="hidden md:flex flex-col fixed top-0 left-0 h-full w-64 bg-card border-r border-border/50">
         <ProfileSection />
         <NavLinks />
       </aside>

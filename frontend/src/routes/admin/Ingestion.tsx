@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { cn } from '@/lib/utils'
+import { Upload, Globe, Database as DbIcon, FileText } from 'lucide-react'
 
 type Tab = 'local' | 'web' | 'database'
 
@@ -73,27 +75,29 @@ export function Ingestion() {
 
   if (loading) return <LoadingSpinner />
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'local', label: 'Local Files' },
-    { key: 'web', label: 'Web URLs' },
-    { key: 'database', label: 'Database' },
+  const tabs: { key: Tab; label: string; icon: typeof Upload }[] = [
+    { key: 'local', label: 'Local Files', icon: Upload },
+    { key: 'web', label: 'Web URLs', icon: Globe },
+    { key: 'database', label: 'Database', icon: DbIcon },
   ]
+
+  const selectClasses = "w-full h-9 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/15 focus:ring-offset-1 disabled:cursor-not-allowed appearance-none cursor-pointer transition-all duration-150"
 
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Data Ingestion</h1>
-        <p className="text-sm text-muted-foreground/70 mt-1">Upload documents to build your knowledge base</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground/90">Data Ingestion</h1>
+        <p className="text-sm text-muted-foreground/60 mt-1">Upload documents to build your knowledge base</p>
       </div>
 
       {/* Collection selector */}
       <div className="space-y-2">
         <Label>Select Collection</Label>
         {(!cols || cols.length === 0) ? (
-          <p className="text-sm text-muted-foreground/60">No collections yet. Please create one first.</p>
+          <EmptyState title="No collections found. Create one first." />
         ) : (
           <select
-            className="w-full h-10 rounded-md border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none cursor-pointer"
+            className={selectClasses}
             value={colId}
             onChange={e => setColId(e.target.value)}
           >
@@ -104,17 +108,19 @@ export function Ingestion() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted/40 rounded-lg w-fit">
+      <div className="flex gap-1 p-1 bg-muted/40 rounded-lg w-fit border border-border/30">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            className={cn(
+              "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-md transition-all duration-150",
               tab === t.key
-                ? 'bg-card text-foreground shadow-sm border border-border/60'
-                : 'text-muted-foreground/70 hover:text-foreground'
-            }`}
+                ? "bg-card text-foreground shadow-sm border border-border/60"
+                : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
+            )}
           >
+            <t.icon className="h-3.5 w-3.5" strokeWidth={1.8} />
             {t.label}
           </button>
         ))}
@@ -122,7 +128,7 @@ export function Ingestion() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">{tabs.find(t => t.key === tab)?.label}</CardTitle>
+          <CardTitle className="text-base font-semibold">{tabs.find(t => t.key === tab)?.label}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {tab === 'local' && (
@@ -142,14 +148,15 @@ export function Ingestion() {
                 }}
               />
               {selectedFiles.length > 0 && (
-                <div className="space-y-2 mt-2 p-3 rounded-lg bg-muted/30 border border-border/30">
-                  <p className="text-xs font-medium text-muted-foreground/80">
+                <div className="space-y-2 mt-2 p-3.5 rounded-lg bg-muted/20 border border-border/30">
+                  <p className="text-xs font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5" />
                     {selectedFiles.length} file(s) selected
-                    {totalSize > 0 && ` — ${(totalSize / 1024 / 1024).toFixed(2)} MB`}
+                    {totalSize > 0 && ` -- ${(totalSize / 1024 / 1024).toFixed(2)} MB`}
                   </p>
                   <div className="max-h-24 overflow-y-auto space-y-0.5">
                     {selectedFiles.map((f, i) => (
-                      <p key={i} className="text-[11px] text-muted-foreground/60 truncate font-mono">{f.name} ({(f.size / 1024).toFixed(1)} KB)</p>
+                      <p key={i} className="text-[11px] text-muted-foreground/50 truncate font-mono">{f.name} ({(f.size / 1024).toFixed(1)} KB)</p>
                     ))}
                   </div>
                 </div>
@@ -160,7 +167,7 @@ export function Ingestion() {
             <div className="space-y-2">
               <Label>URL List (one per line)</Label>
               <textarea
-                className="w-full min-h-[120px] rounded-md border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                className="w-full min-h-[120px] rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/15 focus:ring-offset-1 resize-none transition-all duration-150"
                 value={urls}
                 onChange={e => setUrls(e.target.value)}
                 placeholder="https://example.com/article1&#10;https://example.com/article2"
@@ -179,18 +186,18 @@ export function Ingestion() {
       </Card>
 
       {msg && (
-        <p className={`text-sm font-medium ${msg.includes('successfully') ? 'text-emerald-600' : 'text-destructive'}`}>
+        <p className={cn("text-sm font-semibold", msg.includes('successfully') ? 'text-success' : 'text-destructive')}>
           {msg}
         </p>
       )}
 
       {uploadProgress && (
-        <div className="text-xs text-muted-foreground/70 font-medium">
+        <div className="text-xs text-muted-foreground/70 font-semibold">
           Uploading {uploadProgress.done}/{uploadProgress.total} file(s)...
         </div>
       )}
 
-      <Button onClick={submit} disabled={submitting || !colId}>
+      <Button onClick={submit} disabled={submitting || !colId} className="rounded-lg">
         {submitting ? 'Submitting...' : 'Submit Ingestion Job'}
       </Button>
     </div>

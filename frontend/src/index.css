@@ -1,45 +1,97 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Base palette: warm stone + deep indigo ── */
-  --color-background: hsl(30 10% 98%);
-  --color-foreground: hsl(20 10% 8%);
+  /* ── Palette: Cool neutral + refined indigo accent ── */
+  --color-background: hsl(220 14% 97%);
+  --color-foreground: hsl(224 20% 8%);
 
   --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(20 10% 8%);
+  --color-card-foreground: hsl(224 20% 8%);
 
   --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(20 10% 8%);
+  --color-popover-foreground: hsl(224 20% 8%);
 
-  /* Primary: deep indigo — intellectual, authoritative */
-  --color-primary: hsl(242 36% 23%);
+  /* Primary: refined indigo — authoritative, intellectual */
+  --color-primary: hsl(230 55% 42%);
   --color-primary-foreground: hsl(0 0% 100%);
 
-  /* Secondary: warm stone */
-  --color-secondary: hsl(30 8% 93%);
-  --color-secondary-foreground: hsl(20 10% 15%);
+  /* Secondary: cool stone */
+  --color-secondary: hsl(220 10% 94%);
+  --color-secondary-foreground: hsl(224 16% 18%);
 
-  --color-muted: hsl(30 8% 94%);
-  --color-muted-foreground: hsl(20 6% 45%);
+  --color-muted: hsl(220 8% 95%);
+  --color-muted-foreground: hsl(220 8% 22%);
 
-  /* Accent: softer indigo for interactive states */
-  --color-accent: hsl(242 36% 96%);
-  --color-accent-foreground: hsl(242 36% 23%);
+  /* Accent: indigo tint for interactive states */
+  --color-accent: hsl(230 60% 96%);
+  --color-accent-foreground: hsl(230 55% 35%);
 
-  --color-destructive: hsl(0 72% 51%);
+  --color-destructive: hsl(0 72% 55%);
   --color-destructive-foreground: hsl(0 0% 100%);
 
-  /* Borders: warm stone, not cold gray */
-  --color-border: hsl(30 10% 90%);
-  --color-input: hsl(30 10% 90%);
-  --color-ring: hsl(242 36% 23%);
+  /* Borders: cool stone, not warm */
+  --color-border: hsl(220 10% 90%);
+  --color-input: hsl(220 10% 90%);
+  --color-ring: hsl(230 55% 42%);
 
-  /* Radius: slightly softer */
-  --radius: 0.625rem;
+  /* Success / state colors */
+  --color-success: hsl(152 70% 45%);
+  --color-success-foreground: hsl(0 0% 100%);
 
-  /* Shadow: soft elevation for cards */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
+  /* Radius: consistent scale */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
+
+  /* Shadows: soft, tinted to background hue */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-glow: 0 0 24px rgba(55, 66, 195, 0.12);
+}
+
+/* ── Dark mode tokens ── */
+@variant dark (&:where(.dark, .dark *));
+
+.dark {
+  --color-background: hsl(224 16% 8%);
+  --color-foreground: hsl(220 12% 94%);
+
+  --color-card: hsl(224 14% 11%);
+  --color-card-foreground: hsl(220 12% 94%);
+
+  --color-popover: hsl(224 14% 11%);
+  --color-popover-foreground: hsl(220 12% 94%);
+
+  --color-primary: hsl(230 55% 60%);
+  --color-primary-foreground: hsl(224 14% 11%);
+
+  --color-secondary: hsl(220 10% 16%);
+  --color-secondary-foreground: hsl(220 12% 88%);
+
+  --color-muted: hsl(220 10% 14%);
+  --color-muted-foreground: hsl(220 8% 62%);
+
+  --color-accent: hsl(230 30% 18%);
+  --color-accent-foreground: hsl(230 55% 75%);
+
+  --color-destructive: hsl(0 65% 50%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  --color-border: hsl(220 14% 18%);
+  --color-input: hsl(220 14% 18%);
+  --color-ring: hsl(230 55% 60%);
+
+  --color-success: hsl(152 50% 52%);
+  --color-success-foreground: hsl(224 14% 11%);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 28px rgba(120, 130, 240, 0.15);
 }
 
 /* ── Global refinements ── */
@@ -50,12 +102,39 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv03", "cv04", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
   }
 }
 
 /* ── Table row hover lift ── */
 @layer utilities {
   .row-lift {
-    @apply transition-colors duration-150 hover:bg-accent/50;
+    @apply transition-colors duration-200 hover:bg-accent/30;
+  }
+}
+
+/* ── Premium transition curves ── */
+@layer utilities {
+  .ease-out-expo {
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .ease-spring {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 }

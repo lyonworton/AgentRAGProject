@@ -20,11 +20,11 @@ export function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground/70 mt-1">Overview of your knowledge base</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground/90">Dashboard</h1>
+        <p className="text-sm text-muted-foreground/60 mt-1">Overview of your knowledge base</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatsCard icon={Database} label="Collections" value={cols?.length ?? 0} />
         <StatsCard icon={FileText} label="Documents" value={totalDocs} />
         <StatsCard icon={ListTodo} label="Recent Jobs" value={jobs?.length ?? 0} />
@@ -32,33 +32,33 @@ export function Dashboard() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Recent Jobs</CardTitle>
+          <CardTitle className="text-base font-semibold">Recent Jobs</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {(!jobs || jobs.length === 0) ? (
-            <p className="text-sm text-muted-foreground/60 text-center py-10">No jobs yet</p>
+            <p className="text-sm text-muted-foreground/50 text-center py-10">No jobs yet</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border/60">
-                    <th className="pb-3 pt-4 pl-6 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Job ID</th>
-                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Collection</th>
-                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Source</th>
-                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Progress</th>
-                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Status</th>
-                    <th className="pb-3 pt-4 pr-6 text-right text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Created</th>
+                  <tr className="border-b border-border/50">
+                    <th className="pb-3 pt-4 pl-6 text-left text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Job ID</th>
+                    <th className="pb-3 pt-4 text-left text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Collection</th>
+                    <th className="pb-3 pt-4 text-left text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Source</th>
+                    <th className="pb-3 pt-4 text-left text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Progress</th>
+                    <th className="pb-3 pt-4 text-left text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Status</th>
+                    <th className="pb-3 pt-4 pr-6 text-right text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Created</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/40">
+                <tbody className="divide-y divide-border/30">
                   {jobs.map(j => (
                     <tr key={j.id} className="row-lift">
-                      <td className="py-3 pl-6 font-mono text-xs text-muted-foreground/80">{j.id.slice(0, 8)}</td>
-                      <td className="py-3 font-mono text-xs text-muted-foreground/80">{j.collection_id.slice(0, 8)}</td>
+                      <td className="py-3 pl-6 font-mono text-xs text-muted-foreground/70">{j.id.slice(0, 8)}</td>
+                      <td className="py-3 font-mono text-xs text-muted-foreground/70">{j.collection_id.slice(0, 8)}</td>
                       <td className="py-3"><StatusBadge status={j.source_type} /></td>
-                      <td className="py-3 text-muted-foreground/70">{j.completed_docs}/{j.total_docs}</td>
+                      <td className="py-3 text-muted-foreground/60 font-medium text-xs">{j.completed_docs}/{j.total_docs}</td>
                       <td className="py-3"><StatusBadge status={j.status} /></td>
-                      <td className="py-3 pr-6 text-right text-xs text-muted-foreground/50 whitespace-nowrap">
+                      <td className="py-3 pr-6 text-right text-xs text-muted-foreground/50 whitespace-nowrap font-medium">
                         {j.created_at ? new Date(j.created_at).toLocaleDateString() : '-'}
                       </td>
                     </tr>

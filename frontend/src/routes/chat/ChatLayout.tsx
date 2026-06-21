@@ -32,12 +32,12 @@ export function ChatLayout() {
       {/* Collection selector */}
       <div className="px-3 py-2.5 border-b border-border/30">
         {(!cols || cols.length === 0) ? (
-          <p className="text-xs text-muted-foreground/70 px-1">
+          <p className="text-xs text-muted-foreground/60 px-1 font-medium">
             Create a collection in Admin first
           </p>
         ) : (
           <select
-            className="w-full h-9 rounded-md border border-border/60 bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground/80 focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none cursor-pointer"
+            className="w-full h-8 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/15 focus:ring-offset-1 disabled:cursor-not-allowed appearance-none cursor-pointer transition-all duration-150"
             value={selectedColId}
             onChange={(e) => setSelectedColId(e.target.value)}
           >
@@ -61,7 +61,7 @@ export function ChatLayout() {
             close();
           }}
         >
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          <Plus className="h-3.5 w-3.5 mr-1.5" strokeWidth={2} />
           New Session
         </Button>
       </div>
@@ -75,9 +75,9 @@ export function ChatLayout() {
         <Link
           to="/admin"
           onClick={close}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground/70 hover:bg-accent/60 hover:text-foreground transition-colors duration-150"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground/60 hover:bg-accent/40 hover:text-foreground transition-colors duration-150"
         >
-          <LayoutDashboard className="h-3.5 w-3.5" />
+          <LayoutDashboard className="h-3.5 w-3.5" strokeWidth={1.8} />
           Admin Panel
         </Link>
       </div>
@@ -85,14 +85,14 @@ export function ChatLayout() {
   );
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-background">
       {/* Mobile overlay */}
       <MobileSidebarShell isOpen={mobileOpen} onClose={close}>
         <SidebarContent />
       </MobileSidebarShell>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-card border-r border-border/50 shrink-0 shadow-[2px_0_12px_rgba(0,0,0,0.02)]">
+      <aside className="hidden md:flex flex-col w-72 bg-card border-r border-border/50 shrink-0">
         <SidebarContent />
       </aside>
 
@@ -109,8 +109,10 @@ export function ChatLayout() {
             />
           </span>
           <div className="flex items-center gap-2.5">
-            <MessageSquare className="h-5 w-5 text-primary/70" />
-            <span className="font-semibold text-base tracking-tight">AgentRAG</span>
+            <MessageSquare className="h-5 w-5 text-primary/50" strokeWidth={1.8} />
+            <span className="font-semibold text-sm tracking-tight text-foreground/80">
+              AgentRAG
+            </span>
           </div>
         </header>
         <ChatView selectedCollectionId={selectedColId} />

@@ -28,25 +28,25 @@ export function SessionList({ onClose }: Props) {
               className={cn(
                 "group flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer transition-all duration-150",
                 sessionId === s.id
-                  ? "bg-primary/10 text-primary font-medium border border-primary/15"
-                  : "hover:bg-muted/60 text-muted-foreground/80 hover:text-foreground"
+                  ? "bg-primary/8 text-primary font-semibold border border-primary/10"
+                  : "hover:bg-muted/50 text-muted-foreground/70 hover:text-foreground font-medium"
               )}
               onClick={() => { navigate('/chat/' + s.id); onClose?.() }}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                  <MessageSquare className={cn("h-3.5 w-3.5 shrink-0", sessionId === s.id ? "text-primary/70" : "opacity-50")} strokeWidth={1.8} />
                   <span className="truncate text-sm">{s.title || 'New session'}</span>
                 </div>
-                <p className="text-[11px] text-muted-foreground/50 mt-0.5 ml-5.5">
-                  {s.message_count} messages
+                <p className="text-[11px] text-muted-foreground/40 mt-0.5 ml-5 font-medium">
+                  {s.message_count} message{ s.message_count !== 1 ? 's' : ''}
                 </p>
               </div>
               <button
-                className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive transition-all duration-150 rounded"
+                className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive transition-all duration-150 rounded-md"
                 onClick={e => { e.stopPropagation(); remove(s.id) }}
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
               </button>
             </div>
           ))

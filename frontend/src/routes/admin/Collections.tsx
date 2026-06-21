@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Database } from 'lucide-react'
 import { useCollections } from '@/hooks/useCollections'
 import { deleteCollection } from '@/api/collections'
 import { Button } from '@/components/ui/button'
@@ -32,11 +32,11 @@ export function Collections() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Collections</h1>
-          <p className="text-sm text-muted-foreground/70 mt-1">Manage your knowledge bases</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground/90">Collections</h1>
+          <p className="text-sm text-muted-foreground/60 mt-1">Manage your knowledge bases</p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4 mr-1.5" />
+        <Button onClick={() => setShowCreate(true)} className="rounded-lg">
+          <Plus className="h-4 w-4 mr-1.5" strokeWidth={2} />
           New Collection
         </Button>
       </div>
@@ -51,24 +51,24 @@ export function Collections() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border/60">
-                    <th className="pb-3 pt-4 pl-6 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Name</th>
-                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Documents</th>
-                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Chunks</th>
-                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Status</th>
-                    <th className="pb-3 pt-4 pr-6 text-right text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Actions</th>
+                  <tr className="border-b border-border/50">
+                    <th className="pb-3 pt-4 pl-6 text-left text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Name</th>
+                    <th className="pb-3 pt-4 text-left text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Documents</th>
+                    <th className="pb-3 pt-4 text-left text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Chunks</th>
+                    <th className="pb-3 pt-4 text-left text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Status</th>
+                    <th className="pb-3 pt-4 pr-6 text-right text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/40">
+                <tbody className="divide-y divide-border/30">
                   {data.map(c => (
                     <tr key={c.id} className="row-lift cursor-pointer" onClick={() => navigate(`/admin/collections/${c.id}`)}>
-                      <td className="py-3 pl-6 font-medium">{c.name}</td>
-                      <td className="py-3 text-muted-foreground/70">{c.doc_count}</td>
-                      <td className="py-3 text-muted-foreground/70">{c.chunk_count}</td>
+                      <td className="py-3 pl-6 font-semibold text-foreground/80">{c.name}</td>
+                      <td className="py-3 text-muted-foreground/60 font-medium text-xs">{c.doc_count}</td>
+                      <td className="py-3 text-muted-foreground/60 font-medium text-xs">{c.chunk_count}</td>
                       <td className="py-3"><StatusBadge status={c.status} /></td>
                       <td className="py-3 pr-6 text-right">
-                        <Button variant="ghost" size="icon" disabled={deleting === c.id} onClick={e => { e.stopPropagation(); handleDelete(c.id) }} className="h-8 w-8">
-                          <Trash2 className="h-4 w-4 text-muted-foreground/50 hover:text-destructive transition-colors" />
+                        <Button variant="ghost" size="icon" disabled={deleting === c.id} onClick={e => { e.stopPropagation(); handleDelete(c.id) }} className="h-8 w-8 rounded-md">
+                          <Trash2 className="h-4 w-4 text-muted-foreground/40 hover:text-destructive transition-colors" strokeWidth={1.8} />
                         </Button>
                       </td>
                     </tr>

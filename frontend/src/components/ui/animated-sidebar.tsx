@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User } from "lucide-react";
+import { User, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { cn } from "@/lib/utils";
 
 /* ── HamburgerToggle ── */
 export function HamburgerToggle({
@@ -15,89 +16,23 @@ export function HamburgerToggle({
     <button
       onClick={toggle}
       aria-label="Toggle menu"
-      className="focus:outline-none z-50"
+      className="focus:outline-none z-50 p-1 rounded-md hover:bg-muted transition-colors"
     >
       <motion.div
-        animate={{ y: isOpen ? 13 : 0 }}
-        transition={{ duration: 0.3 }}
+        animate={{ rotate: isOpen ? 90 : 0 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
       >
-        <motion.svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          initial="closed"
-          animate={isOpen ? "open" : "closed"}
-          transition={{ duration: 0.3 }}
-          className="text-foreground"
-        >
-          <motion.path
-            fill="transparent"
-            strokeWidth="2"
-            stroke="currentColor"
-            strokeLinecap="round"
-            variants={{
-              closed: { d: "M 2 2.5 L 22 2.5" },
-              open: { d: "M 3 16.5 L 17 2.5" },
-            }}
-          />
-          <motion.path
-            fill="transparent"
-            strokeWidth="2"
-            stroke="currentColor"
-            strokeLinecap="round"
-            variants={{
-              closed: { d: "M 2 12 L 22 12", opacity: 1 },
-              open: { opacity: 0 },
-            }}
-            transition={{ duration: 0.2 }}
-          />
-          <motion.path
-            fill="transparent"
-            strokeWidth="2"
-            stroke="currentColor"
-            strokeLinecap="round"
-            variants={{
-              closed: { d: "M 2 21.5 L 22 21.5" },
-              open: { d: "M 3 2.5 L 17 16.5" },
-            }}
-          />
-        </motion.svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <motion.line x1="3" y1="6" x2="21" y2="6" />
+          <motion.line x1="3" y1="12" x2="21" y2="12" />
+          <motion.line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
       </motion.div>
     </button>
   );
 }
 
 /* ── CollapsibleSection ── */
-const ChevronDown = () => (
-  <motion.svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <motion.polyline points="6 9 12 15 18 9" />
-  </motion.svg>
-);
-
-const ChevronUp = () => (
-  <motion.svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <motion.polyline points="18 15 12 9 6 15" />
-  </motion.svg>
-);
-
 export function CollapsibleSection({
   title,
   children,
@@ -108,13 +43,21 @@ export function CollapsibleSection({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="mb-1">
+    <div className="mb-0.5">
       <button
-        className="w-full flex items-center justify-between py-1.5 px-3 rounded-md hover:bg-accent/60 transition-colors text-xs font-semibold uppercase tracking-wider text-muted-foreground/70"
+        className={cn(
+          "w-full flex items-center justify-between py-1.5 px-3 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors duration-150",
+          "text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/50",
+          open && "text-foreground/80 bg-muted/60"
+        )}
         onClick={() => setOpen(!open)}
       >
         <span>{title}</span>
-        {open ? <ChevronUp /> : <ChevronDown />}
+        {open ? (
+          <ChevronUp className="h-3.5 w-3.5" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5" />
+        )}
       </button>
       <AnimatePresence>
         {open && (
@@ -122,7 +65,7 @@ export function CollapsibleSection({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
             <div className="pl-4 py-0.5">{children}</div>
@@ -138,16 +81,16 @@ export function ProfileSection() {
   const { user } = useAuth();
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border/30">
-      <div className="w-9 h-9 bg-primary/8 rounded-full flex items-center justify-center shrink-0">
-        <User className="h-4.5 w-4.5 text-primary-foreground/80" />
+    <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40">
+      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+        <User className="h-4 w-4 text-primary/70" />
       </div>
-      <div className="min-w-0">
-        <p className="font-semibold text-sm leading-tight truncate text-foreground">
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-sm leading-tight truncate text-foreground/90">
           {user?.username ?? "User"}
         </p>
-        <p className="text-[11px] text-muted-foreground/60 truncate">
-          {user?.id?.slice(0, 8) ?? '—'}
+        <p className="text-[11px] text-muted-foreground/50 truncate mt-0.5">
+          {user?.id?.slice(0, 8) ?? "—"}
         </p>
       </div>
     </div>
@@ -174,10 +117,11 @@ export function MobileSidebarShell({
       {isOpen && (
         <>
           <motion.div
-            className="md:hidden fixed inset-0 bg-black/30 z-40"
+            className="fixed inset-0 bg-black/40 z-40 md:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={onClose}
           />
           <motion.div
@@ -185,8 +129,8 @@ export function MobileSidebarShell({
             animate="visible"
             exit="hidden"
             variants={mobileSidebarVariants}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border/50 flex flex-col md:hidden shadow-xl"
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-y-0 left-0 z-50 w-72 bg-card border-r border-border/60 flex flex-col md:hidden shadow-elevated"
           >
             {children}
           </motion.div>
