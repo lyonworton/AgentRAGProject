@@ -1,24 +1,61 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(222.2 84% 4.9%);
+  /* ── Base palette: warm stone + deep indigo ── */
+  --color-background: hsl(30 10% 98%);
+  --color-foreground: hsl(20 10% 8%);
+
   --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222.2 84% 4.9%);
+  --color-card-foreground: hsl(20 10% 8%);
+
   --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222.2 84% 4.9%);
-  --color-primary: hsl(222.2 47.4% 11.2%);
-  --color-primary-foreground: hsl(210 40% 98%);
-  --color-secondary: hsl(210 40% 96.1%);
-  --color-secondary-foreground: hsl(222.2 47.4% 11.2%);
-  --color-muted: hsl(210 40% 96.1%);
-  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
-  --color-accent: hsl(210 40% 96.1%);
-  --color-accent-foreground: hsl(222.2 47.4% 11.2%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-  --color-border: hsl(214.3 31.8% 91.4%);
-  --color-input: hsl(214.3 31.8% 91.4%);
-  --color-ring: hsl(222.2 84% 4.9%);
-  --radius: 0.5rem;
+  --color-popover-foreground: hsl(20 10% 8%);
+
+  /* Primary: deep indigo — intellectual, authoritative */
+  --color-primary: hsl(242 36% 23%);
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  /* Secondary: warm stone */
+  --color-secondary: hsl(30 8% 93%);
+  --color-secondary-foreground: hsl(20 10% 15%);
+
+  --color-muted: hsl(30 8% 94%);
+  --color-muted-foreground: hsl(20 6% 45%);
+
+  /* Accent: softer indigo for interactive states */
+  --color-accent: hsl(242 36% 96%);
+  --color-accent-foreground: hsl(242 36% 23%);
+
+  --color-destructive: hsl(0 72% 51%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  /* Borders: warm stone, not cold gray */
+  --color-border: hsl(30 10% 90%);
+  --color-input: hsl(30 10% 90%);
+  --color-ring: hsl(242 36% 23%);
+
+  /* Radius: slightly softer */
+  --radius: 0.625rem;
+
+  /* Shadow: soft elevation for cards */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+/* ── Global refinements ── */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv03", "cv04", "ss01";
+  }
+}
+
+/* ── Table row hover lift ── */
+@layer utilities {
+  .row-lift {
+    @apply transition-colors duration-150 hover:bg-accent/50;
+  }
 }

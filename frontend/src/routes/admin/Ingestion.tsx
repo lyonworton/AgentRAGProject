@@ -19,15 +19,11 @@ export function Ingestion() {
   const [submitting, setSubmitting] = useState(false)
   const [msg, setMsg] = useState('')
 
-  // local
   const [files, setFiles] = useState<FileList | null>(null)
-  // File selection preview
   const [selectedFiles, setSelectedFiles] = useState<{ name: string; size: number }[]>([])
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
   const [totalSize, setTotalSize] = useState(0)
-  // web
   const [urls, setUrls] = useState('')
-  // database
   const [dbUrl, setDbUrl] = useState('')
   const [dbQuery, setDbQuery] = useState('')
   const [titleCol, setTitleCol] = useState('')
@@ -41,7 +37,6 @@ export function Ingestion() {
         if (!files || files.length === 0) { setMsg('Please select files'); setSubmitting(false); return }
         const fileArray = Array.from(files)
 
-        // Use ingestLocalBatch for files > 5, otherwise use the direct fetch
         if (fileArray.length > 5) {
           await ingestLocalBatch(colId, fileArray, (progress) => {
             setUploadProgress({ done: progress.done, total: progress.total })
@@ -80,37 +75,56 @@ export function Ingestion() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'local', label: 'Local Files' },
-    { key: 'web', label: 'Web' },
+    { key: 'web', label: 'Web URLs' },
     { key: 'database', label: 'Database' },
   ]
 
   return (
-    <div className="space-y-4 max-w-2xl">
-      <h1 className="text-xl font-bold">Data Ingestion</h1>
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Data Ingestion</h1>
+        <p className="text-sm text-muted-foreground/70 mt-1">Upload documents to build your knowledge base</p>
+      </div>
 
+      {/* Collection selector */}
       <div className="space-y-2">
         <Label>Select Collection</Label>
         {(!cols || cols.length === 0) ? (
-          <p className="text-sm text-muted-foreground">No collections yet. Please create one first.</p>
+          <p className="text-sm text-muted-foreground/60">No collections yet. Please create one first.</p>
         ) : (
-          <select className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={colId} onChange={e => setColId(e.target.value)}>
+          <select
+            className="w-full h-10 rounded-md border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none cursor-pointer"
+            value={colId}
+            onChange={e => setColId(e.target.value)}
+          >
             <option value="">-- Select a collection --</option>
             {cols.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
       </div>
 
-      <div className="flex gap-2 border-b">
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-muted/40 rounded-lg w-fit">
         {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === t.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              tab === t.key
+                ? 'bg-card text-foreground shadow-sm border border-border/60'
+                : 'text-muted-foreground/70 hover:text-foreground'
+            }`}
+          >
             {t.label}
           </button>
         ))}
       </div>
 
       <Card>
-        <CardContent className="p-4 space-y-4">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{tabs.find(t => t.key === tab)?.label}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           {tab === 'local' && (
             <div className="space-y-2">
               <Label>Select Files</Label>
@@ -128,14 +142,14 @@ export function Ingestion() {
                 }}
               />
               {selectedFiles.length > 0 && (
-                <div className="space-y-2 mt-2">
-                  <p className="text-sm font-medium">
+                <div className="space-y-2 mt-2 p-3 rounded-lg bg-muted/30 border border-border/30">
+                  <p className="text-xs font-medium text-muted-foreground/80">
                     {selectedFiles.length} file(s) selected
-                    {totalSize > 0 && ` -- ${(totalSize / 1024 / 1024).toFixed(2)} MB`}
+                    {totalSize > 0 && ` — ${(totalSize / 1024 / 1024).toFixed(2)} MB`}
                   </p>
-                  <div className="max-h-32 overflow-y-auto space-y-0.5">
+                  <div className="max-h-24 overflow-y-auto space-y-0.5">
                     {selectedFiles.map((f, i) => (
-                      <p key={i} className="text-xs text-muted-foreground truncate">{f.name} ({(f.size / 1024).toFixed(1)} KB)</p>
+                      <p key={i} className="text-[11px] text-muted-foreground/60 truncate font-mono">{f.name} ({(f.size / 1024).toFixed(1)} KB)</p>
                     ))}
                   </div>
                 </div>
@@ -145,24 +159,33 @@ export function Ingestion() {
           {tab === 'web' && (
             <div className="space-y-2">
               <Label>URL List (one per line)</Label>
-              <textarea className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm" value={urls} onChange={e => setUrls(e.target.value)} placeholder="https://example.com/article1&#10;https://example.com/article2" />
+              <textarea
+                className="w-full min-h-[120px] rounded-md border border-border/60 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none"
+                value={urls}
+                onChange={e => setUrls(e.target.value)}
+                placeholder="https://example.com/article1&#10;https://example.com/article2"
+              />
             </div>
           )}
           {tab === 'database' && (
             <div className="space-y-3">
-              <div className="space-y-2"><Label>Database URL</Label><Input value={dbUrl} onChange={e => setDbUrl(e.target.value)} placeholder="postgresql://user:pass@host/db" /></div>
-              <div className="space-y-2"><Label>SQL Query</Label><Input value={dbQuery} onChange={e => setDbQuery(e.target.value)} placeholder="SELECT * FROM articles" /></div>
-              <div className="space-y-2"><Label>Title Column</Label><Input value={titleCol} onChange={e => setTitleCol(e.target.value)} placeholder="title" /></div>
-              <div className="space-y-2"><Label>Content Columns (comma separated)</Label><Input value={contentCols} onChange={e => setContentCols(e.target.value)} placeholder="body,summary" /></div>
+              <div className="space-y-1.5"><Label>Database URL</Label><Input value={dbUrl} onChange={e => setDbUrl(e.target.value)} placeholder="postgresql://user:pass@host/db" /></div>
+              <div className="space-y-1.5"><Label>SQL Query</Label><Input value={dbQuery} onChange={e => setDbQuery(e.target.value)} placeholder="SELECT * FROM articles" /></div>
+              <div className="space-y-1.5"><Label>Title Column</Label><Input value={titleCol} onChange={e => setTitleCol(e.target.value)} placeholder="title" /></div>
+              <div className="space-y-1.5"><Label>Content Columns (comma separated)</Label><Input value={contentCols} onChange={e => setContentCols(e.target.value)} placeholder="body,summary" /></div>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {msg && <p className={`text-sm ${msg.includes('successfully') ? 'text-green-600' : 'text-destructive'}`}>{msg}</p>}
+      {msg && (
+        <p className={`text-sm font-medium ${msg.includes('successfully') ? 'text-emerald-600' : 'text-destructive'}`}>
+          {msg}
+        </p>
+      )}
 
       {uploadProgress && (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-xs text-muted-foreground/70 font-medium">
           Uploading {uploadProgress.done}/{uploadProgress.total} file(s)...
         </div>
       )}

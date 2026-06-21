@@ -4,6 +4,7 @@ import { useSessions } from '@/hooks/useSessions'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { ErrorBanner } from '@/components/shared/ErrorBanner'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { cn } from '@/lib/utils'
 
 interface Props { onClose?: () => void }
 
@@ -17,37 +18,38 @@ export function SessionList({ onClose }: Props) {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="p-2">
+      <div className="p-1.5 space-y-0.5">
         {(!data || data.length === 0) ? (
           <EmptyState title="No conversation history" />
         ) : (
-          <div className="space-y-1">
-            {data.map(s => (
-              <div
-                key={s.id}
-                className={`group flex items-center justify-between px-3 py-2 rounded-md text-sm cursor-pointer transition-colors ${
-                  sessionId === s.id ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted'
-                }`}
-                onClick={() => { navigate('/chat/' + s.id); onClose?.() }}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="truncate">{s.title || 'New session'}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 ml-6">
-                    {s.message_count} messages
-                  </p>
+          data.map(s => (
+            <div
+              key={s.id}
+              className={cn(
+                "group flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer transition-all duration-150",
+                sessionId === s.id
+                  ? "bg-primary/10 text-primary font-medium border border-primary/15"
+                  : "hover:bg-muted/60 text-muted-foreground/80 hover:text-foreground"
+              )}
+              onClick={() => { navigate('/chat/' + s.id); onClose?.() }}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                  <span className="truncate text-sm">{s.title || 'New session'}</span>
                 </div>
-                <button
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive transition-opacity"
-                  onClick={e => { e.stopPropagation(); remove(s.id) }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                <p className="text-[11px] text-muted-foreground/50 mt-0.5 ml-5.5">
+                  {s.message_count} messages
+                </p>
               </div>
-            ))}
-          </div>
+              <button
+                className="opacity-0 group-hover:opacity-100 p-1 hover:text-destructive transition-all duration-150 rounded"
+                onClick={e => { e.stopPropagation(); remove(s.id) }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))
         )}
       </div>
     </div>

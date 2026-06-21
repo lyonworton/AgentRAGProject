@@ -28,11 +28,11 @@ export function HamburgerToggle({
           initial="closed"
           animate={isOpen ? "open" : "closed"}
           transition={{ duration: 0.3 }}
-          className="text-black"
+          className="text-foreground"
         >
           <motion.path
             fill="transparent"
-            strokeWidth="3"
+            strokeWidth="2"
             stroke="currentColor"
             strokeLinecap="round"
             variants={{
@@ -42,7 +42,7 @@ export function HamburgerToggle({
           />
           <motion.path
             fill="transparent"
-            strokeWidth="3"
+            strokeWidth="2"
             stroke="currentColor"
             strokeLinecap="round"
             variants={{
@@ -53,7 +53,7 @@ export function HamburgerToggle({
           />
           <motion.path
             fill="transparent"
-            strokeWidth="3"
+            strokeWidth="2"
             stroke="currentColor"
             strokeLinecap="round"
             variants={{
@@ -108,9 +108,9 @@ export function CollapsibleSection({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="mb-2">
+    <div className="mb-1">
       <button
-        className="w-full flex items-center justify-between py-2 px-4 rounded-xl hover:bg-accent transition-colors text-sm font-medium"
+        className="w-full flex items-center justify-between py-1.5 px-3 rounded-md hover:bg-accent/60 transition-colors text-xs font-semibold uppercase tracking-wider text-muted-foreground/70"
         onClick={() => setOpen(!open)}
       >
         <span>{title}</span>
@@ -125,7 +125,7 @@ export function CollapsibleSection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="pl-4 py-1">{children}</div>
+            <div className="pl-4 py-0.5">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -138,16 +138,16 @@ export function ProfileSection() {
   const { user } = useAuth();
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center shrink-0">
-        <User className="h-5 w-5 text-muted-foreground" />
+    <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border/30">
+      <div className="w-9 h-9 bg-primary/8 rounded-full flex items-center justify-center shrink-0">
+        <User className="h-4.5 w-4.5 text-primary-foreground/80" />
       </div>
       <div className="min-w-0">
-        <p className="font-semibold text-sm truncate">
+        <p className="font-semibold text-sm leading-tight truncate text-foreground">
           {user?.username ?? "User"}
         </p>
-        <p className="text-xs text-muted-foreground truncate">
-          ID: {user?.id?.slice(0, 8) ?? "—"}
+        <p className="text-[11px] text-muted-foreground/60 truncate">
+          {user?.id?.slice(0, 8) ?? '—'}
         </p>
       </div>
     </div>
@@ -186,7 +186,7 @@ export function MobileSidebarShell({
             exit="hidden"
             variants={mobileSidebarVariants}
             transition={{ duration: 0.3 }}
-            className="fixed inset-y-0 left-0 z-50 w-64 bg-background border-r flex flex-col md:hidden"
+            className="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border/50 flex flex-col md:hidden shadow-xl"
           >
             {children}
           </motion.div>

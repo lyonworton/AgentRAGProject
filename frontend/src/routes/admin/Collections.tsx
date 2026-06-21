@@ -4,7 +4,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useCollections } from '@/hooks/useCollections'
 import { deleteCollection } from '@/api/collections'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { ErrorBanner } from '@/components/shared/ErrorBanner'
@@ -29,43 +29,53 @@ export function Collections() {
   if (error) return <ErrorBanner message={error} onRetry={refetch} />
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Collections</h1>
-        <Button onClick={() => setShowCreate(true)}><Plus className="h-4 w-4 mr-1" /> New</Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Collections</h1>
+          <p className="text-sm text-muted-foreground/70 mt-1">Manage your knowledge bases</p>
+        </div>
+        <Button onClick={() => setShowCreate(true)}>
+          <Plus className="h-4 w-4 mr-1.5" />
+          New Collection
+        </Button>
       </div>
+
       <CreateCollectionDialog open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); refetch() }} />
+
       {(!data || data.length === 0) ? (
-        <EmptyState title="No collections yet. Click 'New' to create one." />
+        <EmptyState title="No collections yet. Click 'New Collection' to create one." />
       ) : (
         <Card>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="p-3 font-medium">Name</th>
-                  <th className="p-3 font-medium">Docs</th>
-                  <th className="p-3 font-medium">Chunks</th>
-                  <th className="p-3 font-medium">Status</th>
-                  <th className="p-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map(c => (
-                  <tr key={c.id} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer" onClick={() => navigate(`/admin/collections/${c.id}`)}>
-                    <td className="p-3 font-medium">{c.name}</td>
-                    <td className="p-3">{c.doc_count}</td>
-                    <td className="p-3">{c.chunk_count}</td>
-                    <td className="p-3"><StatusBadge status={c.status} /></td>
-                    <td className="p-3">
-                      <Button variant="ghost" size="icon" disabled={deleting === c.id} onClick={e => { e.stopPropagation(); handleDelete(c.id) }}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60">
+                    <th className="pb-3 pt-4 pl-6 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Name</th>
+                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Documents</th>
+                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Chunks</th>
+                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Status</th>
+                    <th className="pb-3 pt-4 pr-6 text-right text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {data.map(c => (
+                    <tr key={c.id} className="row-lift cursor-pointer" onClick={() => navigate(`/admin/collections/${c.id}`)}>
+                      <td className="py-3 pl-6 font-medium">{c.name}</td>
+                      <td className="py-3 text-muted-foreground/70">{c.doc_count}</td>
+                      <td className="py-3 text-muted-foreground/70">{c.chunk_count}</td>
+                      <td className="py-3"><StatusBadge status={c.status} /></td>
+                      <td className="py-3 pr-6 text-right">
+                        <Button variant="ghost" size="icon" disabled={deleting === c.id} onClick={e => { e.stopPropagation(); handleDelete(c.id) }} className="h-8 w-8">
+                          <Trash2 className="h-4 w-4 text-muted-foreground/50 hover:text-destructive transition-colors" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}

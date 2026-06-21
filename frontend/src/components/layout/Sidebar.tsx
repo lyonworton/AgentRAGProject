@@ -28,14 +28,15 @@ export function Sidebar({ mobileOpen, onToggleMobile }: SidebarProps) {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium transition-colors",
+      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+      "hover:bg-accent/60",
       isActive
-        ? "bg-primary text-primary-foreground"
-        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        ? "bg-primary/90 text-primary-foreground shadow-sm"
+        : "text-muted-foreground/80 hover:text-foreground"
     );
 
   const NavLinks = () => (
-    <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+    <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
       {navItems.map(({ to, icon: Icon, label, end }) => (
         <NavLink
           key={to}
@@ -44,7 +45,7 @@ export function Sidebar({ mobileOpen, onToggleMobile }: SidebarProps) {
           className={linkClass}
           onClick={close}
         >
-          <Icon className="h-4 w-4" />
+          <Icon className="h-4 w-4 shrink-0" />
           {label}
         </NavLink>
       ))}
@@ -74,7 +75,7 @@ export function Sidebar({ mobileOpen, onToggleMobile }: SidebarProps) {
         <NavLinks />
       </MobileSidebarShell>
 
-      <aside className="hidden md:flex flex-col fixed top-0 left-0 h-full w-64 bg-background border-r">
+      <aside className="hidden md:flex flex-col fixed top-0 left-0 h-full w-64 bg-card border-r border-border/50 shadow-sm">
         <ProfileSection />
         <NavLinks />
       </aside>

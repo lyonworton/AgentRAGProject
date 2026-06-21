@@ -40,11 +40,18 @@ export function IngestionJobs() {
   if (error) return <ErrorBanner message={error} onRetry={refetch} />
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Ingestion Jobs</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Ingestion Jobs</h1>
+          <p className="text-sm text-muted-foreground/70 mt-1">Track document processing pipeline</p>
+        </div>
         <div className="flex items-center gap-2">
-          <select className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm" value={filterColId} onChange={e => setFilterColId(e.target.value)}>
+          <select
+            className="h-9 rounded-md border border-border/60 bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground/80 focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none cursor-pointer"
+            value={filterColId}
+            onChange={e => setFilterColId(e.target.value)}
+          >
             <option value="">All Collections</option>
             {cols?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -56,52 +63,54 @@ export function IngestionJobs() {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="p-3 font-medium">Job ID</th>
-                  <th className="p-3 font-medium">Collection</th>
-                  <th className="p-3 font-medium">Source</th>
-                  <th className="p-3 font-medium">Progress</th>
-                  <th className="p-3 font-medium">Status</th>
-                  <th className="p-3 font-medium">Created</th>
-                  <th className="p-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobs.map(j => (
-                  <>
-                    <tr key={j.id} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer" onClick={() => setExpanded(expanded === j.id ? null : j.id)}>
-                      <td className="p-3 font-mono text-xs">{j.id.slice(0, 8)}</td>
-                      <td className="p-3 font-mono text-xs">{j.collection_id.slice(0, 8)}</td>
-                      <td className="p-3"><StatusBadge status={j.source_type} /></td>
-                      <td className="p-3">{j.completed_docs}/{j.total_docs}</td>
-                      <td className="p-3"><StatusBadge status={j.status} /></td>
-                      <td className="p-3 text-xs text-muted-foreground">{j.created_at ? new Date(j.created_at).toLocaleString() : '-'}</td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          {['running', 'processing', 'pending'].includes(j.status) && (
-                            <Button variant="ghost" size="icon" disabled={cancelling === j.id} onClick={e => { e.stopPropagation(); handleCancel(j.id) }} title="Cancel">
-                              <Square className="h-4 w-4 text-amber-500" />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60">
+                    <th className="pb-3 pt-4 pl-6 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Job ID</th>
+                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Collection</th>
+                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Source</th>
+                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Progress</th>
+                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Status</th>
+                    <th className="pb-3 pt-4 text-left text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Created</th>
+                    <th className="pb-3 pt-4 pr-6 text-right text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {jobs.map(j => (
+                    <>
+                      <tr key={j.id} className="row-lift cursor-pointer" onClick={() => setExpanded(expanded === j.id ? null : j.id)}>
+                        <td className="py-3 pl-6 font-mono text-xs text-muted-foreground/80">{j.id.slice(0, 8)}</td>
+                        <td className="py-3 font-mono text-xs text-muted-foreground/80">{j.collection_id.slice(0, 8)}</td>
+                        <td className="py-3"><StatusBadge status={j.source_type} /></td>
+                        <td className="py-3 text-muted-foreground/70">{j.completed_docs}/{j.total_docs}</td>
+                        <td className="py-3"><StatusBadge status={j.status} /></td>
+                        <td className="py-3 text-xs text-muted-foreground/50 whitespace-nowrap">{j.created_at ? new Date(j.created_at).toLocaleDateString() : '-'}</td>
+                        <td className="py-3 pr-6">
+                          <div className="flex items-center justify-end gap-1">
+                            {['running', 'processing', 'pending'].includes(j.status) && (
+                              <Button variant="ghost" size="icon" disabled={cancelling === j.id} onClick={e => { e.stopPropagation(); handleCancel(j.id) }} className="h-8 w-8" title="Cancel">
+                                <Square className="h-4 w-4 text-amber-500/80" />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" disabled={deleting === j.id} onClick={e => { e.stopPropagation(); handleDelete(j.id) }} className="h-8 w-8" title="Delete">
+                              <Trash2 className="h-4 w-4 text-muted-foreground/50 hover:text-destructive transition-colors" />
                             </Button>
-                          )}
-                          <Button variant="ghost" size="icon" disabled={deleting === j.id} onClick={e => { e.stopPropagation(); handleDelete(j.id) }} title="Delete">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                    {expanded === j.id && j.errors && j.errors.length > 0 && (
-                      <tr key={`${j.id}-err`} className="bg-muted/30">
-                        <td colSpan={7} className="p-3">
-                          <pre className="text-xs text-destructive whitespace-pre-wrap">{JSON.stringify(j.errors, null, 2)}</pre>
+                          </div>
                         </td>
                       </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
+                      {expanded === j.id && j.errors && j.errors.length > 0 && (
+                        <tr key={`${j.id}-err`} className="bg-muted/30">
+                          <td colSpan={7} className="py-3 pl-6 pr-6">
+                            <pre className="text-xs text-destructive/80 whitespace-pre-wrap font-mono bg-destructive/5 rounded-lg p-3">{JSON.stringify(j.errors, null, 2)}</pre>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -10,6 +10,7 @@ import {
   ProfileSection,
   MobileSidebarShell,
 } from "@/components/ui/animated-sidebar";
+import { cn } from "@/lib/utils";
 
 export function ChatLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -28,14 +29,15 @@ export function ChatLayout() {
     <div className="flex flex-col h-full">
       <ProfileSection />
 
-      <div className="p-3 border-y shrink-0">
+      {/* Collection selector */}
+      <div className="px-3 py-2.5 border-b border-border/30">
         {(!cols || cols.length === 0) ? (
-          <p className="text-xs text-muted-foreground px-1">
+          <p className="text-xs text-muted-foreground/70 px-1">
             Create a collection in Admin first
           </p>
         ) : (
           <select
-            className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+            className="w-full h-9 rounded-md border border-border/60 bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground/80 focus:outline-none focus:ring-1 focus:ring-primary/30 appearance-none cursor-pointer"
             value={selectedColId}
             onChange={(e) => setSelectedColId(e.target.value)}
           >
@@ -48,17 +50,18 @@ export function ChatLayout() {
         )}
       </div>
 
-      <div className="p-2 border-b shrink-0">
+      {/* New session button */}
+      <div className="p-2.5">
         <Button
           variant="outline"
           size="sm"
-          className="w-full rounded-xl"
+          className="w-full rounded-lg"
           onClick={() => {
             navigate("/chat");
             close();
           }}
         >
-          <Plus className="h-4 w-4 mr-1" />
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
           New Session
         </Button>
       </div>
@@ -67,14 +70,15 @@ export function ChatLayout() {
         <SessionList onClose={close} />
       </div>
 
-      <div className="p-3 border-t shrink-0">
+      {/* Admin link */}
+      <div className="p-3 border-t border-border/30">
         <Link
           to="/admin"
           onClick={close}
-          className="flex items-center gap-2 w-full py-2 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground/70 hover:bg-accent/60 hover:text-foreground transition-colors duration-150"
         >
-          <LayoutDashboard className="h-4 w-4" />
-          Admin
+          <LayoutDashboard className="h-3.5 w-3.5" />
+          Admin Panel
         </Link>
       </div>
     </div>
@@ -88,22 +92,25 @@ export function ChatLayout() {
       </MobileSidebarShell>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-background border-r shrink-0">
+      <aside className="hidden md:flex flex-col w-72 bg-card border-r border-border/50 shrink-0 shadow-[2px_0_12px_rgba(0,0,0,0.02)]">
         <SidebarContent />
       </aside>
 
-      {/* Main */}
+      {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 border-b flex items-center px-4 shrink-0">
+        <header className={cn(
+          "h-14 border-b flex items-center px-4 shrink-0",
+          "md:hidden border-border/40 bg-card/80 backdrop-blur-sm"
+        )}>
           <span className="md:hidden mr-2">
             <HamburgerToggle
               toggle={() => setMobileOpen(!mobileOpen)}
               isOpen={mobileOpen}
             />
           </span>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            <span className="font-bold text-lg">AgentRAG</span>
+          <div className="flex items-center gap-2.5">
+            <MessageSquare className="h-5 w-5 text-primary/70" />
+            <span className="font-semibold text-base tracking-tight">AgentRAG</span>
           </div>
         </header>
         <ChatView selectedCollectionId={selectedColId} />
