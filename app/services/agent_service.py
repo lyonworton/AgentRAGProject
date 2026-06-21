@@ -1,4 +1,5 @@
 import asyncio
+import json
 import time
 from app.agents.state import AgentState
 from app.agents.graph import get_graph
@@ -293,7 +294,7 @@ class AgentService:
                     elif node_name == "verify":
                         claims = accumulated.get("verified_claims", [])
                         if claims:
-                            key = str(len(claims))
+                            key = json.dumps(claims, sort_keys=True)
                             if key != last_thoughts.get("verify"):
                                 last_thoughts["verify"] = key
                                 verified = sum(1 for c in claims if c.get("status") == "verified")

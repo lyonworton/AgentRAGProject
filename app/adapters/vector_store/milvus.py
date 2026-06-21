@@ -35,7 +35,7 @@ class MilvusStore(BaseVectorStore):
             FieldSchema("parent_chunk_id", DataType.VARCHAR, max_length=64, nullable=True),
         ])
         col = Collection(name, schema)
-        col.create_index("embedding", {"metric_type":"COSINE","index_type":"IVF_FLAT","params":{"nlist":128}})
+        col.create_index("embedding", {"metric_type": "COSINE", "index_type": "HNSW", "params": {"M": 16, "efConstruction": 256}})
         col.load()
 
     async def insert(self, name, chunks, embeddings, flush=False):
