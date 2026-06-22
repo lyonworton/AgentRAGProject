@@ -82,3 +82,20 @@ def test_import_router_fallback_rules():
 def test_import_executor_resolve_groups():
     from app.agents.executor import _resolve_groups
     assert _resolve_groups is not None
+
+
+def test_import_preprocessor_pipeline():
+    from app.ingestion.preprocessor import PreprocessorPipeline
+    assert PreprocessorPipeline is not None
+
+
+def test_import_preprocessor_modules():
+    from app.adapters.preprocessor.extractor import PDFTextExtractor
+    from app.adapters.preprocessor.cleaner import HeaderFooterCleaner
+    from app.adapters.preprocessor.table import TableExtractor
+    from app.adapters.preprocessor.chunker import ParentChildChunker
+    from app.adapters.preprocessor.base import BaseStep, ExtractedPDF, ChunkedDocument
+    assert all(x is not None for x in [
+        PDFTextExtractor, HeaderFooterCleaner, TableExtractor,
+        ParentChildChunker, BaseStep, ExtractedPDF, ChunkedDocument,
+    ])
