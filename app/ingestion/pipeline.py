@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 from datetime import datetime, timezone
 from app.adapters.vector_store.milvus import MilvusStore
+from app.ingestion.preprocessor import PreprocessorPipeline
 from app.ingestion.sources.base import BaseSource
 from app.ingestion.semantic_path.chunker import chunk_text
 from app.ingestion.semantic_path.embedder import embed_chunks
@@ -18,12 +19,25 @@ LOADERS = {".pdf": PDFLoader, ".md": MarkdownLoader, ".txt": MarkdownLoader}
 # === 三路路径函数 ===
 
 async def run_semantic_path(doc, col_name: str, embedding_dim: int) -> dict:
-    """Semantic path: chunk -> embed -> Milvus.
+    """Semantic path: preprocess (optional) -> chunk -> embed -> Milvus.
 
-    Returns a dict with chunks, embeddings, and doc_id for batch flushing.
-    The caller is responsible for batch flushing.
+    If preprocessor is enabled, use PreprocessorPipeline on the source file
+    to produce parent-child chunks. Otherwise fall back to the original
+    chunk_text(doc.content).
     """
-    chunks = await chunk_text(doc.content, {"source": doc.source_path})
+    settings = get_settings()
+
+    if settings.preprocessor_enabled:
+        pipeline = PreprocessorPipeline(doc.source_path)
+        chunked = await pipeline.run()
+
+        # Update doc.content with cleaned text so graph/keyword paths benefit too
+        doc.content = chunked.cleaned_full_text
+
+        chunks = chunked.child_chunks
+    else:
+        chunks = await chunk_text(doc.content, {"source": doc.source_path})
+
     if not chunks:
         raise ValueError("No chunks produced")
     embs = await embed_chunks(chunks)
@@ -131,13 +145,14 @@ async def batch_flush_milvus(col_name: str, batch_data: list[dict]) -> int:
         chunks = item['chunks']
         embs = item['embeddings']
         for i, c in enumerate(chunks):
+            metadata = c.get("metadata", {})
             all_records.append({
                 'chunk_id': uuid.uuid4().hex[:12],
                 'document_id': doc_id,
                 'text': c['text'],
-                'metadata': c.get('metadata', {}),
+                'metadata': metadata,
                 'chunk_index': i,
-                'parent_chunk_id': '',
+                'parent_chunk_id': metadata.get('parent_group_id', ''),
             })
             all_embeddings.append(embs[i])
 

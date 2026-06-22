@@ -7,9 +7,12 @@ from app.ingestion.pipeline import (
 
 
 @pytest.mark.asyncio
-@patch("app.ingestion.pipeline.chunk_text")
 @patch("app.ingestion.pipeline.embed_chunks")
-async def test_run_semantic_path(mock_embed, mock_chunk):
+@patch("app.ingestion.pipeline.get_settings")
+@patch("app.ingestion.pipeline.chunk_text")
+async def test_run_semantic_path(mock_chunk, mock_settings, mock_embed):
+    mock_settings.return_value.preprocessor_enabled = False
+    mock_settings.return_value.embedding_dim = 1536
     mock_chunk.return_value = [{"text": "chunk1", "metadata": {}}]
     mock_embed.return_value = [[0.1, 0.2]]
 
