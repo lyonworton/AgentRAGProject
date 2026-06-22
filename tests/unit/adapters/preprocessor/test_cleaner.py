@@ -17,19 +17,20 @@ def _make_extracted(pages_data):
 
 @pytest.mark.asyncio
 async def test_auto_detect_repeated_header():
-    """Pages with identical top text should be detected as headers and stripped."""
+    """Pages with identical top-N text should be detected as headers and stripped."""
     cleaner = HeaderFooterCleaner(top_lines=2, bottom_lines=2)
     pages = [
-        "CONFIDENTIAL\nActual content line 1\nActual content line 2",
-        "CONFIDENTIAL\nMore content here\nAnd more text",
-        "CONFIDENTIAL\nThird page stuff\nStill going",
+        "CONFIDENTIAL\nSection A\nActual content line 1\nActual content line 2",
+        "CONFIDENTIAL\nSection A\nMore content here\nAnd more text",
+        "CONFIDENTIAL\nSection A\nThird page stuff\nStill going",
     ]
     data = _make_extracted(pages)
     result = await cleaner.run(data)
 
-    # "CONFIDENTIAL" should be stripped from all pages
+    # The repeated top-2 lines should be stripped from all pages
     for page in result.pages:
         assert "CONFIDENTIAL" not in page["text"]
+        assert "Section A" not in page["text"]
 
 
 @pytest.mark.asyncio

@@ -192,21 +192,61 @@ class ParentChildChunker(BaseStep):
         return chunks
 
     def _assign_offsets(self, parent_groups: dict, child_chunks: list[dict], full_text: str) -> None:
-        """Assign content_start/content_end offsets for parent groups and children."""
-        for pg_id, pg in parent_groups.items():
-            heading = pg["heading"]
-            # Find the heading position in full_text
-            pos = full_text.find(heading)
-            if pos >= 0:
-                pg["content_start"] = pos
-                pg["content_end"] = pos + len(pg["text"])
+        """Assign content_start/content_end offsets for parent groups and children.
 
-            for child in child_chunks:
-                if child["parent_group_id"] == pg_id:
-                    child["metadata"]["content_start"] = pg["content_start"]
-                    child["metadata"]["content_end"] = (
-                        pg["content_start"] + child["metadata"]["content_end"]
-                    )
+        Uses positional tracking instead of string search: walk through
+        full_text and match each parent-group's heading text against the
+        ordered headings from the sections, anchoring offsets to the
+        actual position where that heading appears.
+        """
+        # Re-detect sections to get the ordered list of (heading_label, section_text)
+        lines = full_text.split("\n")
+        sections = []
+        current_heading = "Unassigned"
+        current_lines = []
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                current_lines.append(stripped)
+                continue
+            if _is_heading(stripped):
+                if current_lines:
+                    sections.append((current_heading, "".join(current_lines)))
+                current_heading = _extract_heading_text(stripped)
+                current_lines = [stripped + "\n"]
+            else:
+                current_lines.append(line + "\n")
+
+        if current_lines:
+            sections.append((current_heading, "".join(current_lines)))
+        elif not sections:
+            sections.append(("Unassigned", full_text))
+
+        # Walk through sections and find each heading's position in full_text
+        pos = 0
+        for heading_label, section_text in sections:
+            # Search for the heading text at or after current position
+            idx = full_text.find(heading_label, pos)
+            if idx < 0:
+                pos += len(section_text)
+                continue
+
+            # Find all parent groups whose heading matches this section
+            for pg_id, pg in parent_groups.items():
+                if pg["heading"] == heading_label:
+                    pg["content_start"] = idx
+                    pg["content_end"] = idx + len(pg["text"])
+
+                    # Assign child offsets relative to parent group
+                    for child in child_chunks:
+                        if child["parent_group_id"] == pg_id:
+                            child["metadata"]["content_start"] = pg["content_start"]
+                            child["metadata"]["content_end"] = (
+                                pg["content_start"] + child["metadata"]["content_end"]
+                            )
+
+            pos = idx + len(section_text)
 
     @staticmethod
     def _parent_id(heading: str) -> str:

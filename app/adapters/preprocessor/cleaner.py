@@ -103,7 +103,7 @@ class HeaderFooterCleaner(BaseStep):
         texts = []
         for page in pages:
             lines = page["text"].strip().split("\n")[:n]
-            texts.append(lines[0] if lines else "")
+            texts.append("\n".join(lines))
         return texts
 
     @staticmethod
