@@ -10,6 +10,7 @@ class ExtractedPDF:
     page_boundaries: list[tuple[int, int]]  # (char_start, char_end) for each page in full_text
     has_tables: bool = False              # Whether tables were detected
     table_regions: list[dict] = field(default_factory=list)  # [{"page": N, "bbox": {...}, "rows": [[...]]}]
+    tables: list[dict] = field(default_factory=list)  # Output: converted markdown tables
 
 
 class BaseStep(ABC):
