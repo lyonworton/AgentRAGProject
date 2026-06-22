@@ -9,6 +9,17 @@ class SearchResult:
     score: float
     metadata: dict = field(default_factory=dict)
     memory_id: str | None = None
+    content_start: int | None = None
+    content_end: int | None = None
+    parent_group_id: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.content_start is None:
+            self.content_start = self.metadata.get("content_start")
+        if self.content_end is None:
+            self.content_end = self.metadata.get("content_end")
+        if self.parent_group_id is None:
+            self.parent_group_id = self.metadata.get("parent_group_id")
 
 class BaseVectorStore(ABC):
     @abstractmethod
