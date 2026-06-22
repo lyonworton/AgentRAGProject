@@ -13,8 +13,16 @@ class ExtractedPDF:
     tables: list[dict] = field(default_factory=list)  # Output: converted markdown tables
 
 
+@dataclass
+class ChunkedDocument:
+    """Result of chunking an ExtractedPDF into parent groups and child chunks."""
+    child_chunks: list[dict]              # Each: {chunk_id, parent_group_id, text, metadata}
+    parent_groups: dict                   # {pg_id: {text, content_start, content_end, child_ids, heading}}
+    cleaned_full_text: str                # The full text passed through all prior steps
+
+
 class BaseStep(ABC):
     """Base class for all preprocessor steps."""
 
     @abstractmethod
-    async def run(self, data: ExtractedPDF) -> ExtractedPDF: ...
+    async def run(self, data: ExtractedPDF) -> ExtractedPDF | ChunkedDocument: ...
