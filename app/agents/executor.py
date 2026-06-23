@@ -145,7 +145,11 @@ async def executor_node(state: AgentState) -> AgentState:
                 text=hit["text"],
                 score=hit.get("_rerank_score", hit["score"]),
                 source=hit["source"],
-                metadata={},
+                metadata={
+                    "parent_group_id": hit.get("parent_group_id", ""),
+                    "parent_text": hit.get("parent_text", ""),
+                    "parent_heading": hit.get("parent_heading", ""),
+                },
             ))
             seen.add(hit["chunk_id"])
 

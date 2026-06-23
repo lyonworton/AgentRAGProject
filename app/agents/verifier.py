@@ -33,7 +33,10 @@ async def verifier_node(state: AgentState) -> AgentState:
     llm = get_llm()
     draft = state.get("draft_answer", "")
     chunks_text = "\n".join(
-        f"[{r.get('chunk_id', '?')}] {r.get('text', '')[:300]}" for r in state.get("retrieved", [])
+        f"[{r.get('chunk_id', '?')}] parent={r.get('metadata', {}).get('parent_group_id', '?')} "
+        f"heading={r.get('metadata', {}).get('parent_heading', '?')}\n"
+        f"  TEXT: {r.get('metadata', {}).get('parent_text', r.get('text', ''))[:2000]}"
+        for r in state.get("retrieved", [])
     )
 
     if not draft.strip() or not chunks_text.strip():

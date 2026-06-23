@@ -214,6 +214,10 @@ class AgentService:
                 "routes_used": _flatten_routes(result.get("routes", {})),
             },
             "uncertainty_flags": result.get("uncertainty_flags", []),
+            # Reflection & Verification details
+            "reflection_notes": result.get("reflection_notes", ""),
+            "verified_claims": result.get("verified_claims", []),
+            "draft_answer": result.get("draft_answer", ""),
         }
 
     async def run(self, query: str, collection_ids: list[str],
@@ -280,17 +284,13 @@ class AgentService:
                     if node_name == "reflect":
                         draft = accumulated.get("draft_answer", "")
                         notes = accumulated.get("reflection_notes", "")
+                        quality_score = accumulated.get("quality_score", 0)
+                        accumulated["_quality_score"] = quality_score
+                        accumulated["_reflection_notes"] = notes
+
                         if draft and draft != last_thoughts.get("draft"):
                             last_thoughts["draft"] = draft
-                            # Store reflection info for merging with verification later
-                            accumulated["_reflection_notes"] = notes
-                            accumulated["_quality_score"] = accumulated.get("quality_score", 0)
                             thought = {"phase": "Draft", "text": draft[:500]}
-                        elif notes and notes != last_thoughts.get("reflect"):
-                            last_thoughts["reflect"] = notes
-                            accumulated["_reflection_notes"] = notes
-                            accumulated["_quality_score"] = accumulated.get("quality_score", 0)
-                            # Don't emit Reflection separately — it merges into Verification
                     elif node_name == "verify":
                         claims = accumulated.get("verified_claims", [])
                         if claims:
@@ -298,11 +298,10 @@ class AgentService:
                             if key != last_thoughts.get("verify"):
                                 last_thoughts["verify"] = key
                                 verified = sum(1 for c in claims if c.get("status") == "verified")
-                                # Merge reflection + verification into single bubble
-                                reflection_notes = accumulated.get("_reflection_notes", "")
                                 quality_score = accumulated.get("_quality_score", 0)
+                                reflection_notes = accumulated.get("_reflection_notes", "")
 
-                                # Build combined text
+                                # Merge reflection + verification into single bubble
                                 parts = []
                                 if reflection_notes:
                                     parts.append(reflection_notes[:300])

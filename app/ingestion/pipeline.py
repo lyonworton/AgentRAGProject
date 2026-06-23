@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import structlog
 from datetime import datetime, timezone
 from app.adapters.vector_store.milvus import MilvusStore
 from app.ingestion.preprocessor import PreprocessorPipeline
@@ -41,11 +42,21 @@ async def run_semantic_path(doc, col_name: str, embedding_dim: int) -> dict:
     if not chunks:
         raise ValueError("No chunks produced")
     embs = await embed_chunks(chunks)
+    # Collect parent_groups for companion storage
+    parent_groups = {}
+    if hasattr(chunked, "parent_groups"):
+        for pg_id, pg in chunked.parent_groups.items():
+            parent_groups[pg_id] = {
+                "text": pg["text"],
+                "heading": pg.get("heading", ""),
+                "document_id": doc.id,
+            }
     return {
         "doc_id": doc.id,
         "chunks": chunks,
         "embeddings": embs,
         "count": len(chunks),
+        "parent_groups": parent_groups,
     }
 
 
@@ -139,6 +150,7 @@ async def batch_flush_milvus(col_name: str, batch_data: list[dict]) -> int:
 
     all_records = []
     all_embeddings = []
+    all_parent_groups: dict[str, dict] = {}
 
     for item in batch_data:
         doc_id = item['doc_id']
@@ -155,16 +167,25 @@ async def batch_flush_milvus(col_name: str, batch_data: list[dict]) -> int:
                 'parent_chunk_id': metadata.get('parent_group_id', ''),
             })
             all_embeddings.append(embs[i])
+        # Collect parent groups from this document
+        pg_data = item.get("parent_groups")
+        if pg_data:
+            for pg_id, pg in pg_data.items():
+                pg_copy = dict(pg)
+                pg_copy["document_id"] = doc_id
+                all_parent_groups[pg_id] = pg_copy
 
     for start in range(0, len(all_records), BATCH_SIZE):
         batch_records = all_records[start:start + BATCH_SIZE]
         batch_embs = all_embeddings[start:start + BATCH_SIZE]
         await store.insert(col_name, batch_records, batch_embs, flush=True)
 
-    logger.info('batch_flush_complete', total=len(all_records))
-    return len(all_records)
+    logger.info('batch_flush_complete', total=len(all_records), parents=len(all_parent_groups))
+    return len(all_records), all_parent_groups
 
 # === 主管道 ===
+
+logger = structlog.get_logger()
 
 async def run_ingest_pipeline(
     job_id: str,
@@ -295,11 +316,36 @@ async def run_ingest_pipeline(
     # === Batch flush remaining semantic data to Milvus ===
     if semantic_batch_data:
         try:
-            flushed = await batch_flush_milvus(col_name, semantic_batch_data)
-            logger.info("milvus_batch_flushed", total=flushed)
+            flushed, all_parent_groups = await batch_flush_milvus(col_name, semantic_batch_data)
+            logger.info("milvus_batch_flushed", total=flushed, parents=sum(len(item.get("parent_groups", {})) for item in semantic_batch_data))  # noqa: F821
+
+            # Store parent groups in document metadata
+            if all_parent_groups:
+                doc_parent_map: dict[str, dict] = {}
+                for pg_id, pg in all_parent_groups.items():
+                    did = pg.get("document_id", "")
+                    if did not in doc_parent_map:
+                        doc_parent_map[did] = {}
+                    doc_parent_map[did][pg_id] = {
+                        "text": pg["text"],
+                        "heading": pg.get("heading", ""),
+                    }
+                async with db_session_factory() as db:
+                    from sqlalchemy import update, select
+                    for doc_id, groups in doc_parent_map.items():
+                        result = await db.execute(select(Document.metadata_).where(Document.id == doc_id))
+                        meta = result.scalar_one_or_none() or {}
+                        existing = meta.get("parent_groups", {})
+                        existing.update(groups)
+                        await db.execute(
+                            update(Document)
+                            .where(Document.id == doc_id)
+                            .values(metadata_={**meta, "parent_groups": existing})
+                        )
+                        logger.info("parent_group_set", doc_id=doc_id, pg_count=len(existing))
+                    await db.commit()
+                logger.info("parent_groups_stored", docs=len(doc_parent_map), parents=len(all_parent_groups))
         except Exception as e:
-            import structlog
-            logger = structlog.get_logger()
             logger.error("batch_flush_milvus_failed", error=str(e))
 
     async with db_session_factory() as db:

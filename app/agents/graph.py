@@ -67,6 +67,9 @@ async def should_continue(state: AgentState) -> str:
                 retrieved=len(state.get("retrieved", [])), prev_score=state.get("prev_score"),
                 intent=state.get("intent", ""))
     if state["iteration"] >= state["max_iterations"]:
+        # Even at max iterations, run verification if quality is good enough
+        if state["quality_score"] >= 0.7:
+            return "verify"
         logger.info("should_continue: max_iterations_reached")
         return "synthesize"
     # No improvement: retrieved chunk IDs unchanged from last round → stop looping

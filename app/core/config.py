@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     # Elasticsearch
     es_host: str = "http://localhost:9200"
 
+    preprocessor_enabled: bool = True
+    preprocessor_parentchunk_size: int = 2000
+    preprocessor_subchunk_size: int = 128
+    preprocessor_header_footer_regex: str = ""
+    preprocessor_table_enabled: bool = True
+
     # Reranker (Phase 5)
     reranker_provider: str = "rrf"                 # rrf | bge | cohere
     reranker_model: str = "BAAI/bge-reranker-v2-m3"

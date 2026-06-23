@@ -33,7 +33,10 @@ async def reflector_node(state: AgentState) -> AgentState:
     logger.info("reflect_node_start", retrieved=len(state.get("retrieved", [])))
     llm = get_llm()
     chunks_text = "\n".join(
-        f"[{r.get('chunk_id', '?')}] {r.get('text', '')[:500]}" for r in state.get("retrieved", [])
+        f"[{r.get('chunk_id', '?')}] parent={r.get('metadata', {}).get('parent_group_id', '?')} "
+        f"heading={r.get('metadata', {}).get('parent_heading', '?')}\n"
+        f"  TEXT: {r.get('metadata', {}).get('parent_text', r.get('text', ''))[:2000]}"
+        for r in state.get("retrieved", [])
     )
 
     # Single LLM call: draft + self-rate

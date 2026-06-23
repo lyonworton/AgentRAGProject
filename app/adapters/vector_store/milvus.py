@@ -52,6 +52,10 @@ class MilvusStore(BaseVectorStore):
         col = Collection(name)
         col.flush()
 
+    # === Parent group helpers (stored in Postgres, not Milvus) ===
+    # Milvus requires every collection to have a vector field, so parent groups
+    # are stored in the document's metadata_ JSONB column instead.
+
     async def search(self, name, qe, top_k=10):
         col = self._get_collection(name)
         if col is None:

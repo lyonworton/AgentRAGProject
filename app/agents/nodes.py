@@ -28,7 +28,9 @@ async def synthesize_node(state: AgentState) -> AgentState:
                 has_draft=bool(state.get("draft_answer")), retrieved=len(state.get("retrieved", [])))
     llm = get_llm()
     chunks_text = "\n\n".join(
-        f"CHUNK [{r.get('chunk_id', '?')}] (from {r.get('document_id', '?')}, score={r.get('score', 0):.3f}):\n{r.get('text', '')}"
+        f"CHUNK [{r.get('chunk_id', '?')}] parent={r.get('metadata', {}).get('parent_group_id', '?')} "
+        f"(from {r.get('document_id', '?')}, score={r.get('score', 0):.3f}):\n"
+        f"{r.get('metadata', {}).get('parent_text', r.get('text', ''))}"
         for r in state.get("retrieved", [])
     )
 
