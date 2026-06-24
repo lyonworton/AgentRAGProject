@@ -92,6 +92,10 @@ Default login: `admin` / `admin` (change after first login)
 
 ## Architecture
 
+![System Architecture](docs/图片11.png)
+
+![Agent Pipeline](docs/图片12.png)
+
 ```
 Browser (:3000)
   └── Nginx (frontend)
