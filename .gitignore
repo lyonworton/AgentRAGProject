@@ -3,11 +3,24 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .env
+.env.*
+!.env.example
 .playwright-mcp/
 uploads/
+models/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
 
 # SDD worktree clones (isolated git checkouts, not part of main workspace)
 .worktrees/
 
-# ECC worktree clones (isolated git checkouts, not part of main workspace)
+# ECC worktree clones (isolated git checkouts, not part of workspace)
 .claude/worktrees/

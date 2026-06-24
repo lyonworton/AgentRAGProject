@@ -24,7 +24,7 @@ AgentRAG is an intelligent question-answering system. Upload documents, then ask
 | Embedding | Xinference (bge-m3 on GPU) |
 | Vector DB | Milvus (HNSW index) |
 | Relational DB | PostgreSQL + pgvector |
-| Full-text Search | Elasticsearch 8 + IK analyzer |
+| Full-text Search | Elasticsearch 8 (IK analyzer deferred, uses standard tokenizer) |
 | Knowledge Graph | Neo4j 5 |
 | Job Queue | Redis + ARQ |
 
@@ -181,8 +181,8 @@ All configuration is via the `.env` file. Key variables:
 | `OPENAI_API_KEY` | *(required)* | Your LLM provider API key |
 | `OPENAI_BASE_URL` | `https://api.deepseek.com/v1` | LLM API endpoint |
 | `LLM_MODEL` | `deepseek-v4-flash` | Model name to use |
-| `XINFERENCE_ENDPOINT` | `http://127.0.0.1:9997` | GPU embedding server |
-| `RERANKER_PROVIDER` | `rrf` | Reranker: `rrf` (free) / `bge` (GPU) / `cohere` |
+| `XINFERENCE_ENDPOINT` | `http://xinference:9997` | GPU embedding server (Docker: use service name; local: `http://127.0.0.1:9997`) |
+| `RERANKER_PROVIDER` | `rrf` | Reranker: `rrf` (free, zero-cost) / `bge` (requires FlagEmbedding) / `cohere` |
 | `SECRET_KEY` | `change-me-in-production` | JWT signing key — **change this!** |
 | `NEO4J_PASSWORD` | `agentrag123` | Neo4j database password |
 
