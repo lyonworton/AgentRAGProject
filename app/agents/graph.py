@@ -82,7 +82,7 @@ async def should_continue(state: AgentState) -> str:
     if retrieved is not None and not retrieved:
         return "synthesize"
     # 已查到足够多 chunks 但 quality 仍低 → 大概率是缺角度而非缺内容，不再循环
-    if len(retrieved) >= 40 and state["iteration"] >= 1:
+    if retrieved is not None and len(retrieved) >= 40 and state["iteration"] >= 1:
         return "synthesize"
     # Note: iteration is incremented in reflector_node, not here.
     # should_continue is a conditional-edge function — its state mutations
