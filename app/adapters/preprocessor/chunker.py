@@ -6,17 +6,112 @@ import re
 from app.adapters.preprocessor.base import BaseStep, ChunkedDocument, ExtractedPDF
 
 
-# Heading detection patterns
+# Heading detection patterns — ordered by specificity.
+# PDFs rarely have Markdown markers, so we rely on structural cues.
 _HEADING_PATTERNS = [
     re.compile(r"^#{1,6}\s+.+$"),                          # Markdown: # Title
-    re.compile(r"^\d+(?:\.\d+)*\s+[A-Za-z一-鿿].+$"),  # Numbered: 1. Title
-    re.compile(r"^(Chapter|Section|Article|Part)\s+\d+"),   # Keyword: Chapter 1
+
+    # Keyword-based: "Chapter 1", "Section 2.3", etc.
+    re.compile(r"^(Chapter|Section|Article|Part|Appendix)\s+\d+(?:[./]\d+)*$"),
+
+    # Numbered heading: "1. Intro", "2.3 Results", "4.1.2 Sub", etc.
+    # \d+(?:[./]\d*)* allows "1." (zero digits after dot) as well as "2.3", "4.1.2".
+    re.compile(r"^\d+(?:[./]\d*)*\s+.+$"),
 ]
 
 
+def _check_unnumbered_heading(stripped: str) -> bool:
+    """Heuristic for unnumbered headings like 'RESULTS AND DISCUSSION' or 'Magnetic Ground State'."""
+    words = stripped.split()
+    if len(words) > 12 or len(stripped) > 80:
+        return False
+    # Must have at least one uppercase letter
+    if not any(c.isupper() for c in stripped):
+        return False
+    # Reject if it looks like a full sentence (article + verb)
+    has_article = any(w.lower() in ('the', 'a', 'an') for w in words)
+    has_verb = any(w.lower() in ('is', 'are', 'was', 'were', 'has', 'have',
+                                  'show', 'shows', 'demonstrate', 'indicate',
+                                  'suggest', 'suggests', 'predict', 'predicts',
+                                  'confirm', 'confirms', 'report', 'reports')
+                   for w in words)
+    if has_article and has_verb:
+        return False
+    return True
+
+
 def _is_heading(line: str) -> bool:
-    """Return True if the line looks like a section heading."""
-    return any(pat.match(line) for pat in _HEADING_PATTERNS)
+    """Return True if the line looks like a section heading.
+
+    Heuristics:
+    - Headings are typically short (≤ 60 chars after numbering)
+    - Headings rarely end with terminal punctuation (. ! ?)
+    - Section numbers are integer sequences: "1", "2.3", "4.1.2"
+    - Decimal values like "4.0", "1.58" are NOT headings
+    """
+    stripped = line.strip()
+    if not stripped:
+        return False
+
+    # Quick rejection: terminal punctuation -> not a heading
+    if stripped[-1] in ".!?":
+        return False
+
+    # Must match at least one pattern (for numbered/keyword/markdown headings)
+    if not any(pat.match(stripped) for pat in _HEADING_PATTERNS):
+        # Fallback: check unnumbered heading heuristics
+        return _check_unnumbered_heading(stripped)
+
+    # Markdown headings: # Title, ## Methods
+    if stripped.startswith("#"):
+        return len(stripped) <= 80
+
+    # Keyword headings: Chapter 1, Section 2.3
+    if re.match(r"^(Chapter|Section|Article|Part|Appendix)\s+", stripped):
+        return True
+
+    # Numbered headings: "1. Intro", "2.3 Results", "4.1.2 Subsection"
+    # vs decimal values: "4.0 eV...", "1.58 meV..."
+    num_match = re.match(r"^(\d+(?:[./]\d*)*)\s+(.+)$", stripped)
+    if not num_match:
+        return False
+
+    number_part = num_match.group(1)
+    text_part = num_match.group(2)
+
+    # Count separators to distinguish section outline from decimals
+    dot_count = number_part.count('.')
+    slash_count = number_part.count('/')
+
+    if dot_count + slash_count >= 2:
+        # Multi-level section: "4.1.2", "2.3.1" -> definitely a section number
+        pass
+    elif dot_count == 1 and slash_count == 0:
+        # Could be "2.3" (section) or "4.0" (decimal)
+        last_dot = number_part.rfind('.')
+        after_last_dot = number_part[last_dot + 1:]
+        if not after_last_dot:
+            # "1." -> section marker with trailing dot
+            pass
+        else:
+            # Has digits after dot: "2.3" or "4.0"
+            # Disambiguate by checking text_part case
+            first_word = text_part.split()[0] if text_part.split() else ""
+            if first_word and first_word[0].isupper():
+                # Title case -> likely a section heading
+                pass
+            else:
+                # Lowercase -> likely a decimal value followed by sentence
+                return False
+    # else: plain digit "1", "2", "3" -> section number
+
+    # Length and word count constraints
+    if len(text_part) > 60:
+        return False
+    if len(text_part.split()) > 15:
+        return False
+
+    return True
 
 
 def _extract_heading_text(line: str) -> str:

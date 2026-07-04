@@ -24,6 +24,8 @@ export function MessageBubble({ role, content, isStreaming, citations, traceId, 
 
   function renderContent(text: string) {
     if (!citations || citations.length === 0) return text
+
+    // Split on [1], [2], [3], ... and replace with clickable badges
     const parts = text.split(/(\[\d+\])/g)
     return parts.map((part, i) => {
       const m = part.match(/^\[(\d+)\]$/)

@@ -64,7 +64,9 @@ export function useChatStream(
         thoughts: m.thoughts || undefined,
       }))
       setMessages(msgs)
-      setCitations([])
+      // Restore global citations from the last assistant message for CitationPanel
+      const lastAssistant = [...msgs].reverse().find((m: ChatMessage) => m.role === 'assistant')
+      setCitations(lastAssistant?.citations || [])
       setThoughts([])
     } else if (!sessionId) {
       setMessages([])

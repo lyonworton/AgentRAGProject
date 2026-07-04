@@ -94,7 +94,7 @@ Default login: `admin` / `admin` (change after first login)
 
 ![System Architecture](docs/图片11.png)
 
-![Agent Pipeline](docs/图片12.png)
+![Agent Pipeline](docs/图片13.png)
 
 ```
 Browser (:3000)

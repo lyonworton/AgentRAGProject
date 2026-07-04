@@ -32,11 +32,42 @@ async def verifier_node(state: AgentState) -> AgentState:
     logger.info("verify_node_start", draft_len=len(state.get("draft_answer", "")), retrieved=len(state.get("retrieved", [])))
     llm = get_llm()
     draft = state.get("draft_answer", "")
-    chunks_text = "\n".join(
-        f"[{r.get('chunk_id', '?')}] parent={r.get('metadata', {}).get('parent_group_id', '?')} "
-        f"heading={r.get('metadata', {}).get('parent_heading', '?')}\n"
-        f"  TEXT: {r.get('metadata', {}).get('parent_text', r.get('text', ''))[:2000]}"
-        for r in state.get("retrieved", [])
+
+    # Group by parent_group_id — each parent block emitted once with its children
+    chunks_by_parent: dict[str, dict] = {}
+    for r in state.get("retrieved", []):
+        pg_id = r.get("metadata", {}).get("parent_group_id", "unassigned")
+        if pg_id not in chunks_by_parent:
+            chunks_by_parent[pg_id] = {
+                "heading": r.get("metadata", {}).get("parent_heading", "Unassigned"),
+                "parent_text": r.get("metadata", {}).get("parent_text", ""),
+                "children": [],
+            }
+        chunks_by_parent[pg_id]["children"].append({
+            "chunk_id": r.get("chunk_id", "?"),
+            "text": r.get("text", ""),
+            "score": r.get("score", 0),
+        })
+
+    def _fmt_block(pg_id: str, info: dict) -> str:
+        heading = info["heading"]
+        if len(heading) > 60:
+            heading = heading[:57] + "..."
+        if heading and heading != "Unassigned":
+            lines = [f"=== SECTION: {heading} ==="]
+        else:
+            lines = [f"=== SECTION: (parent={pg_id}) ==="]
+        if info["parent_text"]:
+            lines.append(info["parent_text"])
+        else:
+            lines.extend(c["text"] for c in info["children"])
+        lines.append("---")
+        for c in sorted(info["children"], key=lambda x: x["score"], reverse=True):
+            lines.append(f"  CHUNK [{c['chunk_id']}] (score={c['score']:.3f}): {c['text']}")
+        return "\n".join(lines)
+
+    chunks_text = "\n\n".join(
+        _fmt_block(pg_id, info) for pg_id, info in chunks_by_parent.items()
     )
 
     if not draft.strip() or not chunks_text.strip():
